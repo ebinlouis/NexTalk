@@ -3,7 +3,7 @@ class CustomError extends Error {
         super(message);
         this.message = message;
         this.statusCode = statusCode;
-        Error.captureStackTree(this, this.constructor);
+        Error.captureStackTrace(this, this.constructor);
     }
 }
 
