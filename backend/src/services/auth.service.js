@@ -1,6 +1,7 @@
 import User from '../models/user.model.js';
 import CustomError from '../utils/error.js';
-import { hashPassword } from '../utils/bcrypt.js';
+import { hashPassword, comparePassword } from '../utils/bcrypt.js';
+import { clearTokensCookies } from '../utils/jwt.js';
 
 export const signupService = async (data) => {
     const { fullName, email, password } = data;
@@ -18,16 +19,52 @@ export const signupService = async (data) => {
 
         const hashedPassword = await hashPassword(password);
 
-       const newUser = await User.create({
-        fullName:fullName,
-        email:email,
-        password:hashedPassword,
-       })
+        const newUser = await User.create({
+            fullName: fullName,
+            email: email,
+            password: hashedPassword,
+        });
 
-        return { userId: newUser._id, success: true, message: 'User created successfully' };
+        return {
+            id: newUser._id,
+            fullName: newUser.fullName,
+            email: newUser.email,
+            profilePic: newUser.profilePic,
+        };
     } catch (error) {
         throw error;
     }
 };
-export const loginService = () => {};
-export const logoutService = () => {};
+
+export const loginService = async (data) => {
+    const { email, password } = data;
+    try {
+        if (!email || !password) {
+            throw new CustomError('Email and password are required', 400);
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            throw new CustomError('Invalid credentials', 400);
+        }
+
+        const isPasswordCorrect = await comparePassword(password, user.password);
+        if (!isPasswordCorrect) {
+            throw new CustomError('Invalid credentials', 400);
+        }
+
+        return {
+            id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic,
+        };
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const logoutService = (res) => {
+    clearTokensCookies(res);
+    return null;
+};
