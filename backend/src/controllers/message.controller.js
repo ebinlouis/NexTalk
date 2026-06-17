@@ -1,4 +1,11 @@
-import { getAllContactsService, sendMessageService, getChattedUsersService } from '../services/message.service.js';
+import mongoose from 'mongoose';
+import User from '../models/user.model.js';
+import {
+    getAllContactsService,
+    sendMessageService,
+    getChattedUsersService,
+    getMessagesService,
+} from '../services/message.service.js';
 
 export const getContacts = async (req, res) => {
     try {
@@ -44,6 +51,38 @@ export const getChattedUsers = async (req, res) => {
         });
     } catch (error) {
         console.error('Error in getChattedUsers:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const getMessages = async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const partnerId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user id',
+            });
+        }
+
+        const partner = await User.findById(partnerId);
+        if (!partner) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        const messages = await getMessagesService(currentUserId, partnerId);
+
+        res.status(200).json({
+            success: true,
+            data: messages,
+        });
+    } catch (error) {
+        console.error('Error in getMessages:', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };

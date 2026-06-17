@@ -58,3 +58,14 @@ export const getChattedUsersService = async (currentUserId) => {
     const users = await User.find({ _id: { $in: chattedUserIds } }).select('-password');
     return users;
 };
+
+export const getMessagesService = async (currentUserId, partnerId) => {
+    const messages = await Message.find({
+        $or: [
+            { senderId: currentUserId, receiverId: partnerId },
+            { senderId: partnerId, receiverId: currentUserId }
+        ]
+    }).sort({ createdAt: 1 });
+
+    return messages;
+};
