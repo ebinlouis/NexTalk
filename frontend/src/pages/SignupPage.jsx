@@ -1,27 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { User, Mail, Lock, Eye, EyeOff, MessageSquare, Check } from 'lucide-react';
+import { User, Mail, Lock, Eye, MessageSquare, Check } from 'lucide-react';
 import InputField from '../components/InputField';
 
 export default function SignupPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Signup form submitted:', formData);
-  };
-
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center overflow-hidden font-sans select-none">
       
@@ -95,15 +77,13 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form className="space-y-5">
               
               {/* Name Input */}
               <InputField
                 id="name"
                 name="name"
                 label="Full Name"
-                value={formData.name}
-                onChange={handleChange}
                 placeholder="John Doe"
                 required
                 icon={User}
@@ -115,8 +95,6 @@ export default function SignupPage() {
                 name="email"
                 type="email"
                 label="Email Address"
-                value={formData.email}
-                onChange={handleChange}
                 placeholder="john@example.com"
                 required
                 icon={Mail}
@@ -126,21 +104,15 @@ export default function SignupPage() {
               <InputField
                 id="password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 label="Password"
-                value={formData.password}
-                onChange={handleChange}
                 placeholder="••••••••"
                 required
                 icon={Lock}
                 rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-slate-500 hover:text-slate-300 focus:outline-none transition-colors cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                  <div className="text-slate-500 hover:text-slate-300 transition-colors pointer-events-none">
+                    <Eye size={16} />
+                  </div>
                 }
               />
 
@@ -148,28 +120,22 @@ export default function SignupPage() {
               <InputField
                 id="confirmPassword"
                 name="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type="password"
                 label="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
                 placeholder="••••••••"
                 required
                 icon={Lock}
                 rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="text-slate-500 hover:text-slate-300 focus:outline-none transition-colors cursor-pointer"
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                  <div className="text-slate-500 hover:text-slate-300 transition-colors pointer-events-none">
+                    <Eye size={16} />
+                  </div>
                 }
               />
 
               {/* Create Account CTA */}
               <button
-                type="submit"
-                className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-4 focus:ring-indigo-500/30 text-sm md:text-base"
+                type="button"
+                className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-4 focus:ring-indigo-500/30 text-sm md:text-base text-center"
               >
                 Create Account
               </button>

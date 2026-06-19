@@ -9,13 +9,10 @@ export default function InputField({
   name,
   type = 'text',
   label,
-  value,
-  onChange,
   placeholder = '',
   required = false,
   icon: Icon,
   rightElement,
-  error,
 }) {
   return (
     <div className="relative w-full flex flex-col gap-1.5 text-left group">
@@ -39,8 +36,6 @@ export default function InputField({
           id={id}
           name={name}
           type={type}
-          value={value}
-          onChange={onChange}
           placeholder={placeholder}
           required={required}
           className={`w-full bg-slate-900/40 border border-slate-700/80 rounded-xl py-3.5 ${
@@ -56,12 +51,6 @@ export default function InputField({
           </div>
         )}
       </div>
-      
-      {error && (
-        <p className="text-xs text-rose-400 mt-1 font-medium transition-all duration-200" id={`${id}-error`}>
-          {error}
-        </p>
-      )}
     </div>
   );
 }
