@@ -1,20 +1,15 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import SignupPage from './pages/SignupPage';
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from './routes/Routes';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Render Signup directly on both root and /signup paths */}
-        <Route path="/" element={<SignupPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        
-        {/* Fallback route - Render Signup directly as default */}
-        <Route path="*" element={<SignupPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <AppRoutes />
+            <Toaster position="top-center" reverseOrder={false} />
+        </BrowserRouter>
+    );
 }
 
 export default App;

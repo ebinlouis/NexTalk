@@ -13,6 +13,7 @@ export default function InputField({
   required = false,
   icon: Icon,
   rightElement,
+  ...props
 }) {
   return (
     <div className="relative w-full flex flex-col gap-1.5 text-left group">
@@ -43,6 +44,7 @@ export default function InputField({
           } ${
             rightElement ? 'pr-11' : 'pr-4'
           } text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/15 focus:bg-slate-950/60 shadow-inner`}
+          {...props}
         />
         
         {rightElement && (
