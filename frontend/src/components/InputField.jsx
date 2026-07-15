@@ -35,11 +35,11 @@ export default function InputField({
                     type={type}
                     placeholder={placeholder}
                     required={required}
-                    className={`w-full bg-slate-900/10 border border-slate-800/80 hover:border-slate-700/80 rounded-xl py-4 ${
+                    className={`w-full bg-slate-900/10 border border-slate-800/80 hover:border-slate-700/80 rounded-xl py-3 ${
                         Icon ? 'pl-12' : 'pl-4'
                     } ${
                         rightElement ? 'pr-12' : 'pr-4'
-                    } text-slate-100 placeholder-slate-400/80 outline-none transition-all duration-300 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-500/20 focus:bg-slate-950/60 shadow-inner`}
+                    } text-sm text-slate-100 placeholder-slate-400/80 outline-none transition-all duration-300 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-500/20 focus:bg-slate-950/60 shadow-inner`}
                     {...props}
                 />
 
