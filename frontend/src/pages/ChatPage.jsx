@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, MessageSquare, Users, Send } from 'lucide-react';
+import { LogOut, MessageSquare, Users, SendHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Mock data for initial presentation
 const MOCK_CHATS = [
-    { _id: '1', fullName: 'Sarah Connor', email: 'sarah@resistance.org', profilePic: '', lastMessage: 'No fate but what we make.', time: '10:42 AM' },
-    { _id: '2', fullName: 'John Doe', email: 'john@example.com', profilePic: '', lastMessage: 'Hey, is the NexTalk UI ready yet?', time: 'Yesterday' },
-    { _id: '3', fullName: 'Alice Vance', email: 'alice@blackmesa.com', profilePic: '', lastMessage: 'See you at the hazard course.', time: 'Monday' },
+    { _id: '1', fullName: 'Sarah Connor', email: 'sarah@resistance.org', profilePic: '', lastMessage: 'No fate but what we make.', time: '10:42 AM', isOnline: true },
+    { _id: '2', fullName: 'John Doe', email: 'john@example.com', profilePic: '', lastMessage: 'Hey, is the NexTalk UI ready yet?', time: 'Yesterday', isOnline: false },
+    { _id: '3', fullName: 'Alice Vance', email: 'alice@blackmesa.com', profilePic: '', lastMessage: 'See you at the hazard course.', time: 'Monday', isOnline: true },
 ];
 
 const MOCK_CONTACTS = [
@@ -106,27 +106,27 @@ export default function ChatPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_20%,rgba(0,0,0,0.65)_100%)] pointer-events-none" />
 
             {/* Chat Card Container */}
-            <div className="w-full max-w-7xl h-[85vh] min-h-[600px] flex flex-col md:flex-row bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] overflow-hidden z-10">
+            <div className="w-full max-w-6xl h-[85vh] min-h-[600px] flex flex-col md:flex-row bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 border-t-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] overflow-hidden z-10 transition-all duration-500 hover:border-slate-700/50">
                 
                 {/* Left Section (30% Width) */}
-                <div className="w-full md:w-[30%] h-1/2 md:h-full flex flex-col border-r border-slate-900 bg-transparent z-10">
+                <div className="w-full md:w-[30%] h-1/2 md:h-full flex flex-col border-r border-slate-900 bg-slate-950/10 z-10">
                     
                     {/* First Div: Profile Header */}
-                    <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-slate-950/20">
+                    <div className="p-5 border-b border-slate-900 flex items-center justify-between bg-slate-950/20 backdrop-blur-md">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-350 font-medium">
-                                <span className="font-bold text-sm">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 flex items-center justify-center text-slate-200 font-semibold shadow-inner">
+                                <span className="text-sm">
                                     {currentUser.fullName.split(' ').map(n => n[0]).join('')}
                                 </span>
                             </div>
                             <div className="text-left">
-                                <h4 className="text-sm font-semibold text-slate-200">{currentUser.fullName}</h4>
-                                <p className="text-xs text-slate-500">{currentUser.email}</p>
+                                <h4 className="text-base font-semibold text-slate-200">{currentUser.fullName}</h4>
+                                <p className="text-xs text-slate-500 mt-0.5">{currentUser.email}</p>
                             </div>
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/25 transition-all duration-200 cursor-pointer focus:outline-none"
+                            className="p-2 rounded-xl text-slate-400 hover:text-rose-450 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all duration-200 cursor-pointer focus:outline-none"
                             title="Logout"
                         >
                             <LogOut size={18} />
@@ -137,7 +137,7 @@ export default function ChatPage() {
                     <div className="p-3 border-b border-slate-900 flex gap-2 bg-slate-950/10">
                         <button
                             onClick={() => setActiveTab('chats')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold tracking-wide transition-all duration-250 cursor-pointer focus:outline-none border ${
+                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold tracking-wide transition-all duration-200 cursor-pointer focus:outline-none border ${
                                 activeTab === 'chats'
                                     ? 'bg-blue-600/15 border-blue-500/30 text-blue-400 shadow-inner'
                                     : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
@@ -148,7 +148,7 @@ export default function ChatPage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('contacts')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold tracking-wide transition-all duration-250 cursor-pointer focus:outline-none border ${
+                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold tracking-wide transition-all duration-200 cursor-pointer focus:outline-none border ${
                                 activeTab === 'contacts'
                                     ? 'bg-blue-600/15 border-blue-500/30 text-blue-400 shadow-inner'
                                     : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
@@ -160,7 +160,7 @@ export default function ChatPage() {
                     </div>
 
                     {/* Third Div: Users/Contacts List */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-1 bg-transparent">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-transparent scrollbar-thin">
                         {activeTab === 'chats' ? (
                             MOCK_CHATS.map((chat) => (
                                 <button
@@ -168,23 +168,26 @@ export default function ChatPage() {
                                     onClick={() => setSelectedUser(chat)}
                                     className={`w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all duration-200 border cursor-pointer focus:outline-none group ${
                                         selectedUser?._id === chat._id
-                                            ? 'bg-slate-900/50 border-slate-800 text-white shadow-inner'
-                                            : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/25 hover:text-slate-255'
+                                            ? 'bg-slate-900/50 border-slate-800/80 text-white shadow-inner shadow-black/20'
+                                            : 'bg-slate-900/5 border-transparent text-slate-400 hover:bg-slate-900/25 hover:border-slate-800/40 hover:text-slate-200'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3 overflow-hidden">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-300 font-medium">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
                                             <span className="text-xs">{chat.fullName.split(' ').map(n => n[0]).join('')}</span>
+                                            {chat.isOnline && (
+                                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950 animate-pulse" />
+                                            )}
                                         </div>
                                         <div className="overflow-hidden">
-                                            <h5 className={`text-xs font-semibold transition-colors duration-200 ${selectedUser?._id === chat._id ? 'text-white' : 'text-slate-350'}`}>
+                                            <h5 className={`text-sm font-semibold transition-colors duration-200 ${selectedUser?._id === chat._id ? 'text-white' : 'text-slate-350'}`}>
                                                 {chat.fullName}
                                             </h5>
-                                            <p className="text-xs text-slate-500 truncate max-w-[180px] mt-0.5">{chat.lastMessage}</p>
+                                            <p className="text-xs text-slate-505 truncate max-w-[180px] mt-0.5">{chat.lastMessage}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <span className="text-[10px] text-slate-600">{chat.time}</span>
+                                    <div className="text-right shrink-0 ml-2">
+                                        <span className="text-[10px] text-slate-600 group-hover:text-slate-500 transition-colors">{chat.time}</span>
                                     </div>
                                 </button>
                             ))
@@ -196,20 +199,22 @@ export default function ChatPage() {
                                         setSelectedUser(contact);
                                         setActiveTab('chats'); // Jump to chats tab upon selection
                                     }}
-                                    className="w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all duration-200 border border-transparent hover:bg-slate-900/25 text-slate-400 hover:text-slate-200 cursor-pointer focus:outline-none"
+                                    className="w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all duration-205 border border-transparent hover:bg-slate-900/25 hover:border-slate-800/40 text-slate-400 hover:text-slate-200 cursor-pointer focus:outline-none"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-300 font-medium">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
                                             <span className="text-xs">{contact.fullName.split(' ').map(n => n[0]).join('')}</span>
+                                            {contact.status === 'Online' && (
+                                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950 animate-pulse" />
+                                            )}
                                         </div>
                                         <div>
-                                            <h5 className="text-xs font-semibold text-slate-355">{contact.fullName}</h5>
+                                            <h5 className="text-sm font-semibold text-slate-300">{contact.fullName}</h5>
                                             <p className="text-xs text-slate-500 mt-0.5">{contact.email}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <span className={`w-1.5 h-1.5 rounded-full ${contact.status === 'Online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-600'}`} />
-                                        <span className="text-[10px] text-slate-650">{contact.status}</span>
+                                        <span className="text-[10px] text-slate-600">{contact.status}</span>
                                     </div>
                                 </button>
                             ))
@@ -218,18 +223,18 @@ export default function ChatPage() {
                 </div>
 
                 {/* Right Section (70% Width) */}
-                <div className="w-full md:w-[70%] h-1/2 md:h-full flex flex-col bg-slate-950/60 backdrop-blur-3xl z-10 relative">
+                <div className="w-full md:w-[70%] h-1/2 md:h-full flex flex-col bg-slate-950/40 backdrop-blur-3xl z-10 relative">
                     
                     {selectedUser ? (
                         <>
                             {/* Selected Partner Header */}
-                            <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-slate-950/20">
+                            <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-slate-950/20 backdrop-blur-md">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-300 font-medium">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner">
                                         <span className="text-xs">{selectedUser.fullName.split(' ').map(n => n[0]).join('')}</span>
                                     </div>
                                     <div className="text-left">
-                                        <h4 className="text-sm font-semibold text-slate-200">{selectedUser.fullName}</h4>
+                                        <h4 className="text-base font-semibold text-slate-200">{selectedUser.fullName}</h4>
                                         <p className="text-[10px] text-emerald-400 flex items-center gap-1">
                                             <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
                                             active now
@@ -239,16 +244,16 @@ export default function ChatPage() {
                             </div>
 
                             {/* Message History list */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-950/5">
                                 {currentThread.map((msg) => {
                                     const isMe = msg.senderId === 'me';
                                     return (
                                         <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed text-left border bg-slate-900/50 text-slate-200 border-slate-800/80 ${
-                                                isMe ? 'rounded-tr-none' : 'rounded-tl-none'
+                                            <div className={`max-w-[70%] rounded-2xl px-4 py-3.5 text-sm leading-relaxed text-left border bg-slate-900/40 text-slate-200 border-slate-850 shadow-md ${
+                                                isMe ? 'rounded-tr-none border-blue-500/10 shadow-blue-500/2' : 'rounded-tl-none'
                                             }`}>
                                                 <p>{msg.text}</p>
-                                                <span className="text-[9px] text-slate-400/60 block text-right mt-1.5">
+                                                <span className="text-[10px] text-slate-500 block text-right mt-1.5">
                                                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -260,32 +265,35 @@ export default function ChatPage() {
 
                             {/* Input Sender controls */}
                             <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-900 bg-slate-950/20">
-                                <div className="flex gap-2">
+                                <div className="flex items-stretch gap-2">
                                     <input
                                         type="text"
                                         placeholder="Type a message..."
                                         value={inputMessage}
                                         onChange={(e) => setInputMessage(e.target.value)}
-                                        className="flex-1 bg-slate-900/10 border border-slate-800/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-250 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-500/10 focus:bg-slate-950/60"
+                                        className="flex-1 bg-slate-900/10 border border-slate-800/80 rounded-xl px-4 py-3.5 text-base text-slate-100 placeholder-slate-500 outline-none transition-all duration-200 focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 focus:bg-slate-950/60 shadow-inner"
                                     />
                                     <button
                                         type="submit"
                                         disabled={!inputMessage.trim()}
-                                        className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-md transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className="px-5 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-md shadow-blue-500/10 transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] flex items-center justify-center shrink-0"
                                     >
-                                        <Send size={16} />
+                                        <SendHorizontal size={20} />
                                     </button>
                                 </div>
                             </form>
                         </>
                     ) : (
                         /* Welcome Screen Placeholder */
-                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none animate-fade-in">
-                            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-                                <MessageSquare size={28} />
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none animate-fade-in relative overflow-hidden">
+                            {/* Ambient back glow behind logo */}
+                            <div className="absolute w-[200px] h-[200px] rounded-full bg-blue-500/5 blur-[80px] pointer-events-none" />
+                            
+                            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 shadow-[0_0_40px_rgba(59,130,246,0.12)] border-t-white/10 animate-float z-10">
+                                <MessageSquare size={32} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-200 mb-2">Welcome to NexTalk</h3>
-                            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+                            <h3 className="text-lg font-bold text-slate-200 mb-2 z-10">Welcome to NexTalk</h3>
+                            <p className="text-xs text-slate-500 max-w-xs leading-relaxed z-10">
                                 Select a chat or contact from the left list to begin messaging and sharing.
                             </p>
                         </div>
