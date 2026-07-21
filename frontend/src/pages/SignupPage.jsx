@@ -54,7 +54,7 @@ export default function SignupPage() {
 
             {/* Main Container */}
             <div
-                className="w-full max-w-6xl mx-auto px-6 md:px-14 py-12 md:py-14 flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-12 lg:gap-16 z-10 animate-fade-in opacity-0 bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] border-t-white/10 relative transition-all duration-500 hover:border-slate-700/50"
+                className="w-full max-w-6xl h-[85vh] min-h-[600px] mx-auto px-6 md:px-14 py-12 md:py-14 flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-12 lg:gap-16 z-10 animate-fade-in opacity-0 bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] border-t-white/10 relative transition-all duration-500 hover:border-slate-700/50"
                 style={{ animationFillMode: 'forwards' }}
             >
                 {/* Left Section: Branding & Features (Hidden on mobile/tablet for centering card) */}
@@ -213,6 +213,7 @@ export default function SignupPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    tabIndex="-1"
                                     className="text-slate-500 hover:text-slate-200 transition-colors duration-200 focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-slate-800/40"
                                 >
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -236,6 +237,7 @@ export default function SignupPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    tabIndex="-1"
                                     className="text-slate-500 hover:text-slate-200 transition-colors duration-200 focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-slate-800/40"
                                 >
                                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, MessageSquare, Shield, Zap } from 'lucide-react';
 import InputField from '../components/InputField';
 import { useAuthStore } from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
+    const navigation = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -25,7 +26,8 @@ export default function LoginPage() {
         if (!formData.email.trim()) return toast.error('Email is required');
         if (!formData.password) return toast.error('Password is required');
 
-        await login(formData);
+        const result = await login(formData);
+        if (result?.success) navigation('/');
     };
 
     return (
@@ -41,7 +43,7 @@ export default function LoginPage() {
 
             {/* Main Container */}
             <div
-                className="w-full max-w-6xl mx-auto px-6 md:px-14 py-12 md:py-14 flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-12 lg:gap-16 z-10 animate-fade-in opacity-0 bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] border-t-white/10 relative transition-all duration-500 hover:border-slate-700/50"
+                className="w-full max-w-6xl h-[85vh] min-h-[600px] mx-auto px-6 md:px-14 py-12 md:py-14 flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-12 lg:gap-16 z-10 animate-fade-in opacity-0 bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] border-t-white/10 relative transition-all duration-500 hover:border-slate-700/50"
                 style={{ animationFillMode: 'forwards' }}
             >
                 {/* Left Section: Branding & Features (Hidden on mobile/tablet for centering card) */}
@@ -187,6 +189,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    tabIndex="-1"
                                     className="text-slate-500 hover:text-slate-200 transition-colors duration-200 focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-slate-800/40"
                                 >
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
