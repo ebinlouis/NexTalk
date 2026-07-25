@@ -19,10 +19,17 @@ export const signupService = async (data) => {
 
         const hashedPassword = await hashPassword(password);
 
+        const initials = fullName
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase();
+
         const newUser = await User.create({
             fullName: fullName,
             email: email,
             password: hashedPassword,
+            profilePic: initials,
         });
 
         return {
