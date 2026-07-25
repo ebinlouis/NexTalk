@@ -8,6 +8,17 @@ export const useAuthStore = create((set) => ({
     isLoggingIn: false,
     isCheckingAuth: true,
 
+    checkAuth: async () => {
+        try {
+            const res = await api.get('/api/auth/check');
+            set({ authUser: res.data.data });
+        } catch (error) {
+            set({ authUser: null });
+        } finally {
+            set({ isCheckingAuth: false });
+        }
+    },
+
     signup: async (data) => {
         set({ isSigningUp: true });
         try {
