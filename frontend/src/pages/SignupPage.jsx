@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff, MessageSquare, Check, Shield, Zap } from 'lucide-react';
 import InputField from '../components/InputField';
 import { useAuthStore } from '../store/useAuthStore';
@@ -17,6 +17,7 @@ export default function SignupPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { signup, isSigningUp } = useAuthStore();
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -39,6 +40,7 @@ export default function SignupPage() {
             email: formData.email,
             password: formData.password,
         });
+        navigate('/login');
     };
 
     return (

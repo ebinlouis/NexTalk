@@ -2,8 +2,6 @@ import { create } from 'zustand';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const useAuthStore = create((set) => ({
     authUser: null,
     isSigningUp: false,
@@ -31,7 +29,6 @@ export const useAuthStore = create((set) => ({
         try {
             const res = await api.post('/api/auth/login', data);
             set({ authUser: res.data.data });
-            await delay(2000);
             toast.success('Welcome back!');
             return { success: true };
         } catch (error) {
@@ -40,6 +37,18 @@ export const useAuthStore = create((set) => ({
             return { success: false, error: errorMessage };
         } finally {
             set({ isLoggingIn: false });
+        }
+    },
+
+    logout: async () => {
+        try {
+            await api.post('/api/auth/logout');
+            set({ authUser: null });
+            toast.success('Logged out successfully');
+            return { success: true };
+        } catch (error) {
+            toast.error('Failed to logout');
+            return { success: false };
         }
     },
 }));
