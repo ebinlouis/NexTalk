@@ -9,7 +9,7 @@ export default function ChatPage() {
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const { logout, authUser } = useAuthStore();
-    const { contacts, getContacts } = useChatStore();
+    const { contacts, getContacts, users, getUsers } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
@@ -34,6 +34,7 @@ export default function ChatPage() {
 
     useEffect(() => {
         getContacts();
+        getUsers();
     }, []);
 
     const handleLogout = async () => {
@@ -138,7 +139,7 @@ export default function ChatPage() {
                     {/* Third Div: Users/Contacts List */}
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-transparent scrollbar-thin">
                         {activeTab === 'chats'
-                            ? [].map((chat) => (
+                            ? users.map((chat) => (
                                   <button
                                       key={chat._id}
                                       onClick={() => setSelectedUser(chat)}
@@ -151,12 +152,9 @@ export default function ChatPage() {
                                       <div className="flex items-center gap-3 overflow-hidden">
                                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
                                               <span className="text-xs">
-                                                  {chat.fullName
-                                                      .split(' ')
-                                                      .map((n) => n[0])
-                                                      .join('')}
+                                                  {chat.profilePic}
                                               </span>
-                                              {chat.isOnline && (
+                                              {chat.status === 'Online' && (
                                                   <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950 animate-pulse" />
                                               )}
                                           </div>
