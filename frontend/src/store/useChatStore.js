@@ -16,4 +16,19 @@ export const useChatStore = create((set) => ({
             set({ isLoadingContacts: false });
         }
     },
+
+    users: [],
+    isLoadingUsers: false,
+
+    getUsers: async () => {
+        set({ isLoadingUsers: true });
+        try {
+            const res = await api.get('/api/messages/users');
+            set({ users: res.data.data });
+        } catch (error) {
+            console.error('Failed to load chatted users:', error.message);
+        } finally {
+            set({ isLoadingUsers: false });
+        }
+    },
 }));
