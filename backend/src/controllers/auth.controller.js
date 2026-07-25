@@ -54,8 +54,8 @@ export const logout = async (req, res) => {
 export const checkAuth = async (req, res) => {
     try {
         const { _id, fullName, email, profilePic } = req.user;
-        
-        res.status(200).json({
+
+        return res.status(200).json({
             success: true,
             message: 'User authenticated successfully',
             data: { id: _id, fullName, email, profilePic },

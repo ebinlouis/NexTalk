@@ -4,7 +4,9 @@ import Message from '../models/message.model.js';
 import CustomError from '../utils/error.js';
 
 export const getAllContactsService = async (currentUserId) => {
-    const users = await User.find({ _id: { $ne: currentUserId } }).select('-password');
+    const users = await User.find({ _id: { $ne: currentUserId } }).select(
+        '-password -createdAt -updatedAt -__v',
+    );
     return users;
 };
 
@@ -29,31 +31,24 @@ export const getChattedUsersService = async (currentUserId) => {
     const chatPartners = await Message.aggregate([
         {
             $match: {
-                $or: [
-                    { senderId: userId },
-                    { receiverId: userId }
-                ]
-            }
+                $or: [{ senderId: userId }, { receiverId: userId }],
+            },
         },
         {
             $project: {
                 partnerId: {
-                    $cond: [
-                        { $eq: ["$senderId", userId] },
-                        "$receiverId",
-                        "$senderId"
-                    ]
-                }
-            }
+                    $cond: [{ $eq: ['$senderId', userId] }, '$receiverId', '$senderId'],
+                },
+            },
         },
         {
             $group: {
-                _id: "$partnerId"
-            }
-        }
+                _id: '$partnerId',
+            },
+        },
     ]);
 
-    const chattedUserIds = chatPartners.map(partner => partner._id);
+    const chattedUserIds = chatPartners.map((partner) => partner._id);
 
     const users = await User.find({ _id: { $in: chattedUserIds } }).select('-password');
     return users;
@@ -63,8 +58,8 @@ export const getMessagesService = async (currentUserId, partnerId) => {
     const messages = await Message.find({
         $or: [
             { senderId: currentUserId, receiverId: partnerId },
-            { senderId: partnerId, receiverId: currentUserId }
-        ]
+            { senderId: partnerId, receiverId: currentUserId },
+        ],
     }).sort({ createdAt: 1 });
 
     return messages;

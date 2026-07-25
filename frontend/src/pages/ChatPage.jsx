@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, MessageSquare, Users, SendHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
+import { useChatStore } from '../store/useChatStore';
 
 export default function ChatPage() {
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const { logout, authUser } = useAuthStore();
+    const { contacts, getContacts } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
@@ -29,6 +31,10 @@ export default function ChatPage() {
     useEffect(() => {
         scrollToBottom();
     }, [selectedUser, localMessages]);
+
+    useEffect(() => {
+        getContacts();
+    }, []);
 
     const handleLogout = async () => {
         const { success } = await logout();
@@ -84,10 +90,7 @@ export default function ChatPage() {
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 flex items-center justify-center text-slate-200 font-semibold shadow-inner">
                                 <span className="text-sm">
-                                    {currentUser.fullName
-                                        .split(' ')
-                                        .map((n) => n[0])
-                                        .join('')}
+                                    {currentUser.profilePic}
                                 </span>
                             </div>
                             <div className="text-left">
@@ -175,7 +178,7 @@ export default function ChatPage() {
                                       </div>
                                   </button>
                               ))
-                            : [].map((contact) => (
+                            : contacts.map((contact) => (
                                   <button
                                       key={contact._id}
                                       onClick={() => {
@@ -187,14 +190,8 @@ export default function ChatPage() {
                                       <div className="flex items-center gap-3">
                                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
                                               <span className="text-xs">
-                                                  {contact.fullName
-                                                      .split(' ')
-                                                      .map((n) => n[0])
-                                                      .join('')}
+                                                  {contact.profilePic}
                                               </span>
-                                              {contact.status === 'Online' && (
-                                                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950 animate-pulse" />
-                                              )}
                                           </div>
                                           <div>
                                               <h5 className="text-sm font-semibold text-slate-300">
@@ -204,11 +201,6 @@ export default function ChatPage() {
                                                   {contact.email}
                                               </p>
                                           </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 shrink-0">
-                                          <span className="text-[10px] text-slate-600">
-                                              {contact.status}
-                                          </span>
                                       </div>
                                   </button>
                               ))}
