@@ -9,12 +9,11 @@ export default function ChatPage() {
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const { logout, authUser } = useAuthStore();
-    const { contacts, getContacts, users, getUsers } = useChatStore();
+    const { contacts, getContacts, users, getUsers, messages, isLoadingMessages, getMessages, sendMessage, isSendingMessage } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [localMessages, setLocalMessages] = useState({});
     const [inputMessage, setInputMessage] = useState('');
 
     const currentUser = authUser || {
@@ -30,12 +29,19 @@ export default function ChatPage() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [selectedUser, localMessages]);
+    }, [selectedUser, messages]);
 
     useEffect(() => {
         getContacts();
         getUsers();
     }, []);
+
+    useEffect(() => {
+        if (!selectedUser?._id) return;
+        getMessages(selectedUser._id).then((res) => {
+            if (!res?.success && res?.error) toast.error(res.error);
+        });
+    }, [selectedUser?._id]);
 
     const handleLogout = async () => {
         const { success } = await logout();
@@ -44,32 +50,30 @@ export default function ChatPage() {
         }
     };
 
+    const getInitials = (name = '') =>
+        name
+            .trim()
+            .split(/\s+/)
+            .map((part) => part[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+
     // Handle message sending
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!inputMessage.trim() || !selectedUser) return;
+        const trimmed = inputMessage.trim();
+        if (!trimmed || !selectedUser || isSendingMessage) return;
 
-        const newMessage = {
-            _id: Date.now().toString(),
-            senderId: 'me',
-            receiverId: selectedUser._id,
-            text: inputMessage,
-            createdAt: new Date().toISOString(),
-        };
-
-        setLocalMessages((prev) => {
-            const userMsgs = prev[selectedUser._id] || [];
-            return {
-                ...prev,
-                [selectedUser._id]: [...userMsgs, newMessage],
-            };
-        });
-
-        setInputMessage('');
+        const isExistingChat = users.some((u) => u._id === selectedUser._id);
+        const res = await sendMessage(selectedUser._id, { text: trimmed });
+        if (res?.success) {
+            setInputMessage('');
+            if (!isExistingChat) getUsers();
+        } else if (res?.error) {
+            toast.error(res.error);
+        }
     };
-
-    // Get current message thread
-    const currentThread = selectedUser ? localMessages[selectedUser._id] || [] : [];
 
     return (
         <div className="relative min-h-screen w-full bg-backdrop text-ink flex items-stretch md:items-center justify-center p-0 md:p-5 overflow-hidden font-sans select-none">
@@ -82,7 +86,7 @@ export default function ChatPage() {
                         <div className="flex items-center gap-3">
                             <div className="relative w-10 h-10 shrink-0">
                                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line">
-                                    <span className="text-sm">{currentUser.profilePic}</span>
+                                    <span className="text-sm">{currentUser.profilePic || getInitials(currentUser.fullName)}</span>
                                 </div>
                                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                             </div>
@@ -149,7 +153,7 @@ export default function ChatPage() {
                                   >
                                       <div className="flex items-center gap-3 min-w-0">
                                           <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
-                                              <span className="text-xs">{chat.profilePic}</span>
+                                              <span className="text-xs">{chat.profilePic || getInitials(chat.fullName)}</span>
                                               {chat.status === 'Online' && (
                                                   <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                                               )}
@@ -183,7 +187,7 @@ export default function ChatPage() {
                                   >
                                       <div className="flex items-center gap-3 min-w-0">
                                           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0">
-                                              <span className="text-xs">{contact.profilePic}</span>
+                                              <span className="text-xs">{contact.profilePic || getInitials(contact.fullName)}</span>
                                           </div>
                                           <div className="min-w-0">
                                               <h5 className="text-xs font-semibold text-ink group-hover:text-primary transition-colors truncate">
@@ -219,10 +223,7 @@ export default function ChatPage() {
                                     </button>
                                     <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative border border-line shrink-0">
                                         <span className="text-xs">
-                                            {selectedUser.fullName
-                                                .split(' ')
-                                                .map((n) => n[0])
-                                                .join('')}
+                                            {selectedUser.profilePic || getInitials(selectedUser.fullName)}
                                         </span>
                                     </div>
                                     <div className="text-left">
@@ -244,32 +245,42 @@ export default function ChatPage() {
                                         Today, End-to-End Encrypted
                                     </div>
                                 </div>
-                                {currentThread.map((msg) => {
-                                    const isMe = msg.senderId === 'me';
-                                    return (
-                                        <div
-                                            key={msg._id}
-                                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                                        >
+                                {isLoadingMessages ? (
+                                    <div className="flex-1 flex items-center justify-center text-xs text-muted">
+                                        Loading messages...
+                                    </div>
+                                ) : messages.length === 0 ? (
+                                    <div className="flex-1 flex items-center justify-center text-xs text-muted">
+                                        No messages yet. Say hello!
+                                    </div>
+                                ) : (
+                                    messages.map((msg) => {
+                                        const isMe = msg.senderId === authUser?._id;
+                                        return (
                                             <div
-                                                className={`animate-message max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-left border border-line bg-white text-ink shadow-xs ${
-                                                    isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                                                }`}
+                                                key={msg._id}
+                                                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                <p>{msg.text}</p>
-                                                <div className="flex items-center justify-end gap-1 mt-1 text-[11px] text-subtle">
-                                                    <span>
-                                                        {new Date(msg.createdAt).toLocaleTimeString(
-                                                            [],
-                                                            { hour: '2-digit', minute: '2-digit' },
-                                                        )}
-                                                    </span>
-                                                    {isMe && <CheckCheck size={14} className="text-subtle" />}
+                                                <div
+                                                    className={`animate-message max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-left border border-line bg-white text-ink shadow-xs ${
+                                                        isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                                                    }`}
+                                                >
+                                                    <p>{msg.text}</p>
+                                                    <div className="flex items-center justify-end gap-1 mt-1 text-[11px] text-subtle">
+                                                        <span>
+                                                            {new Date(msg.createdAt).toLocaleTimeString(
+                                                                [],
+                                                                { hour: '2-digit', minute: '2-digit' },
+                                                            )}
+                                                        </span>
+                                                        {isMe && <CheckCheck size={14} className="text-subtle" />}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
@@ -288,7 +299,7 @@ export default function ChatPage() {
                                     />
                                     <button
                                         type="submit"
-                                        disabled={!inputMessage.trim()}
+                                        disabled={!inputMessage.trim() || isSendingMessage}
                                         className="bg-primary hover:bg-primary-hover disabled:opacity-40 text-white px-4 md:px-5 py-2.5 md:py-3 rounded-xl flex items-center gap-2 font-medium text-xs md:text-sm shadow-sm transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
                                     >
                                         <span>Send</span>
