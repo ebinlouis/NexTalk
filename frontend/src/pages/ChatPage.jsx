@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, MessageSquare, Users, SendHorizontal } from 'lucide-react';
+import { LogOut, MessageSquare, ArrowLeft, CheckCheck, SendHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useChatStore } from '../store/useChatStore';
@@ -9,12 +9,11 @@ export default function ChatPage() {
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const { logout, authUser } = useAuthStore();
-    const { contacts, getContacts, users, getUsers } = useChatStore();
+    const { contacts, getContacts, users, getUsers, messages, isLoadingMessages, getMessages, sendMessage, isSendingMessage } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [localMessages, setLocalMessages] = useState({});
     const [inputMessage, setInputMessage] = useState('');
 
     const currentUser = authUser || {
@@ -30,12 +29,19 @@ export default function ChatPage() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [selectedUser, localMessages]);
+    }, [selectedUser, messages]);
 
     useEffect(() => {
         getContacts();
         getUsers();
     }, []);
+
+    useEffect(() => {
+        if (!selectedUser?._id) return;
+        getMessages(selectedUser._id).then((res) => {
+            if (!res?.success && res?.error) toast.error(res.error);
+        });
+    }, [selectedUser?._id]);
 
     const handleLogout = async () => {
         const { success } = await logout();
@@ -44,66 +50,56 @@ export default function ChatPage() {
         }
     };
 
+    const getInitials = (name = '') =>
+        name
+            .trim()
+            .split(/\s+/)
+            .map((part) => part[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+
     // Handle message sending
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!inputMessage.trim() || !selectedUser) return;
+        const trimmed = inputMessage.trim();
+        if (!trimmed || !selectedUser || isSendingMessage) return;
 
-        const newMessage = {
-            _id: Date.now().toString(),
-            senderId: 'me',
-            receiverId: selectedUser._id,
-            text: inputMessage,
-            createdAt: new Date().toISOString(),
-        };
-
-        setLocalMessages((prev) => {
-            const userMsgs = prev[selectedUser._id] || [];
-            return {
-                ...prev,
-                [selectedUser._id]: [...userMsgs, newMessage],
-            };
-        });
-
-        setInputMessage('');
+        const isExistingChat = users.some((u) => u._id === selectedUser._id);
+        const res = await sendMessage(selectedUser._id, { text: trimmed });
+        if (res?.success) {
+            setInputMessage('');
+            if (!isExistingChat) getUsers();
+        } else if (res?.error) {
+            toast.error(res.error);
+        }
     };
 
-    // Get current message thread
-    const currentThread = selectedUser ? localMessages[selectedUser._id] || [] : [];
-
     return (
-        <div className="relative h-screen w-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 md:p-6 overflow-hidden font-sans select-none">
-            {/* Ambient Background Glows */}
-            <div className="absolute top-[15%] left-[5%] w-[45%] h-[45%] rounded-full bg-blue-500/10 blur-[130px] animate-pulse duration-8000 pointer-events-none" />
-            <div className="absolute bottom-[15%] right-[5%] w-[45%] h-[45%] rounded-full bg-purple-500/8 blur-[130px] animate-pulse duration-6000 pointer-events-none" />
-            <div className="absolute top-[40%] right-[30%] w-[30%] h-[30%] rounded-full bg-indigo-500/5 blur-[120px] animate-pulse duration-7000 pointer-events-none" />
-
-            {/* Radial Dot Grid Background */}
-            <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1.2px,transparent_1.2px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_20%,rgba(0,0,0,0.65)_100%)] pointer-events-none" />
-
+        <div className="relative min-h-screen w-full bg-backdrop text-ink flex items-stretch md:items-center justify-center p-0 md:p-5 overflow-hidden font-sans select-none">
             {/* Chat Card Container */}
-            <div className="w-full max-w-6xl h-[85vh] min-h-[600px] flex flex-col md:flex-row bg-slate-950/50 backdrop-blur-2xl border border-slate-800/95 border-t-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_50px_rgba(59,130,246,0.06)] overflow-hidden z-10 transition-all duration-500 hover:border-slate-700/50">
-                {/* Left Section (30% Width) */}
-                <div className="w-full md:w-[30%] h-1/2 md:h-full flex flex-col border-r border-slate-900 bg-slate-950/10 z-10">
+            <div className="w-full max-w-[1360px] h-screen md:h-[860px] md:max-h-[calc(100vh-40px)] flex flex-col md:flex-row bg-white border-0 md:border md:border-line rounded-none md:rounded-[20px] shadow-card overflow-hidden z-10">
+                {/* Left Section */}
+                <div className={`w-full md:w-[340px] lg:w-[380px] shrink-0 h-full flex flex-col border-r border-line bg-white z-10 ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
                     {/* First Div: Profile Header */}
-                    <div className="p-5 border-b border-slate-900 flex items-center justify-between bg-slate-950/20 backdrop-blur-md">
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 flex items-center justify-center text-slate-200 font-semibold shadow-inner">
-                                <span className="text-sm">
-                                    {currentUser.profilePic}
-                                </span>
+                            <div className="relative w-10 h-10 shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line">
+                                    <span className="text-sm">{currentUser.profilePic || getInitials(currentUser.fullName)}</span>
+                                </div>
+                                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                             </div>
                             <div className="text-left">
-                                <h4 className="text-base font-semibold text-slate-200">
+                                <h4 className="text-sm font-semibold tracking-tight text-ink">
                                     {currentUser.fullName}
                                 </h4>
-                                <p className="text-xs text-slate-500 mt-0.5">{currentUser.email}</p>
+                                <p className="text-xs text-muted mt-0.5">{currentUser.email}</p>
                             </div>
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="p-2 rounded-xl text-slate-400 hover:text-rose-450 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all duration-200 cursor-pointer focus:outline-none"
+                            className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-all duration-200 cursor-pointer focus:outline-none"
                             title="Logout"
                         >
                             <LogOut size={18} />
@@ -111,66 +107,70 @@ export default function ChatPage() {
                     </div>
 
                     {/* Second Div: Navigation Tab Buttons */}
-                    <div className="p-3 border-b border-slate-900 flex gap-2 bg-slate-950/10">
-                        <button
-                            onClick={() => setActiveTab('chats')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold tracking-wide transition-all duration-200 cursor-pointer focus:outline-none border ${
-                                activeTab === 'chats'
-                                    ? 'bg-blue-600/15 border-blue-500/30 text-blue-400 shadow-inner'
-                                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-                            }`}
-                        >
-                            <MessageSquare size={16} />
-                            Chats
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('contacts')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold tracking-wide transition-all duration-200 cursor-pointer focus:outline-none border ${
-                                activeTab === 'contacts'
-                                    ? 'bg-blue-600/15 border-blue-500/30 text-blue-400 shadow-inner'
-                                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
-                            }`}
-                        >
-                            <Users size={16} />
-                            Contacts
-                        </button>
+                    <div className="p-3 border-b border-slate-100 bg-white shrink-0">
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            <button
+                                onClick={() => setActiveTab('chats')}
+                                className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer focus:outline-none ${
+                                    activeTab === 'chats'
+                                        ? 'bg-white text-ink shadow-xs font-semibold'
+                                        : 'text-muted hover:text-ink font-medium'
+                                }`}
+                            >
+                                <span>Chats</span>
+                                <span className={`text-[10px] px-1.5 rounded-full ${activeTab === 'chats' ? 'bg-slate-100 text-ink-slate' : 'bg-slate-200 text-muted'}`}>
+                                    {users.length}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('contacts')}
+                                className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-xs transition-all cursor-pointer focus:outline-none ${
+                                    activeTab === 'contacts'
+                                        ? 'bg-white text-ink shadow-xs font-semibold'
+                                        : 'text-muted hover:text-ink font-medium'
+                                }`}
+                            >
+                                <span>Contacts</span>
+                                <span className={`text-[10px] px-1.5 rounded-full ${activeTab === 'contacts' ? 'bg-slate-100 text-ink-slate' : 'bg-slate-200 text-muted'}`}>
+                                    {contacts.length}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Third Div: Users/Contacts List */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-transparent scrollbar-thin">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 bg-white custom-scrollbar">
                         {activeTab === 'chats'
                             ? users.map((chat) => (
                                   <button
                                       key={chat._id}
                                       onClick={() => setSelectedUser(chat)}
-                                      className={`w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all duration-200 border cursor-pointer focus:outline-none group ${
+                                      className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-150 border-l-4 cursor-pointer focus:outline-none group ${
                                           selectedUser?._id === chat._id
-                                              ? 'bg-slate-900/50 border-slate-800/80 text-white shadow-inner shadow-black/20'
-                                              : 'bg-slate-900/5 border-transparent text-slate-400 hover:bg-slate-900/25 hover:border-slate-800/40 hover:text-slate-200'
+                                              ? 'bg-teal-50/70 border-primary shadow-xs'
+                                              : 'border-transparent hover:bg-slate-50'
                                       }`}
                                   >
-                                      <div className="flex items-center gap-3 overflow-hidden">
-                                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
-                                              <span className="text-xs">
-                                                  {chat.profilePic}
-                                              </span>
+                                      <div className="flex items-center gap-3 min-w-0">
+                                          <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
+                                              <span className="text-xs">{chat.profilePic || getInitials(chat.fullName)}</span>
                                               {chat.status === 'Online' && (
-                                                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950 animate-pulse" />
+                                                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                                               )}
                                           </div>
-                                          <div className="overflow-hidden">
+                                          <div className="min-w-0 flex-1">
                                               <h5
-                                                  className={`text-sm font-semibold transition-colors duration-200 ${selectedUser?._id === chat._id ? 'text-white' : 'text-slate-350'}`}
+                                                  className={`text-xs font-semibold truncate transition-colors ${selectedUser?._id === chat._id ? 'text-primary' : 'text-ink'}`}
                                               >
                                                   {chat.fullName}
                                               </h5>
-                                              <p className="text-xs text-slate-505 truncate max-w-[180px] mt-0.5">
+                                              <p className="text-xs text-muted truncate max-w-[180px] leading-tight mt-0.5">
                                                   {chat.lastMessage}
                                               </p>
                                           </div>
                                       </div>
                                       <div className="text-right shrink-0 ml-2">
-                                          <span className="text-[10px] text-slate-600 group-hover:text-slate-500 transition-colors">
+                                          <span className="text-[11px] text-subtle">
                                               {chat.time}
                                           </span>
                                       </div>
@@ -183,49 +183,55 @@ export default function ChatPage() {
                                           setSelectedUser(contact);
                                           setActiveTab('chats'); // Jump to chats tab upon selection
                                       }}
-                                      className="w-full p-3.5 rounded-2xl flex items-center justify-between text-left transition-all duration-205 border border-transparent hover:bg-slate-900/25 hover:border-slate-800/40 text-slate-400 hover:text-slate-200 cursor-pointer focus:outline-none"
+                                      className="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-colors hover:bg-slate-50 cursor-pointer focus:outline-none group"
                                   >
-                                      <div className="flex items-center gap-3">
-                                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner shrink-0">
-                                              <span className="text-xs">
-                                                  {contact.profilePic}
-                                              </span>
+                                      <div className="flex items-center gap-3 min-w-0">
+                                          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0">
+                                              <span className="text-xs">{contact.profilePic || getInitials(contact.fullName)}</span>
                                           </div>
-                                          <div>
-                                              <h5 className="text-sm font-semibold text-slate-300">
+                                          <div className="min-w-0">
+                                              <h5 className="text-xs font-semibold text-ink group-hover:text-primary transition-colors truncate">
                                                   {contact.fullName}
                                               </h5>
-                                              <p className="text-xs text-slate-500 mt-0.5">
+                                              <p className="text-[11px] text-muted truncate mt-0.5">
                                                   {contact.email}
                                               </p>
                                           </div>
                                       </div>
+                                      <span className="px-2.5 py-1 text-xs font-medium text-primary bg-teal-50 group-hover:bg-primary group-hover:text-white rounded-lg transition-all shrink-0 ml-2">
+                                          Message
+                                      </span>
                                   </button>
                               ))}
                     </div>
                 </div>
 
-                {/* Right Section (70% Width) */}
-                <div className="w-full md:w-[70%] h-1/2 md:h-full flex flex-col bg-slate-950/40 backdrop-blur-3xl z-10 relative">
+                {/* Right Section */}
+                <div className={`flex-1 h-full flex-col bg-canvas z-10 relative ${selectedUser ? 'flex' : 'hidden md:flex'}`}>
                     {selectedUser ? (
                         <>
                             {/* Selected Partner Header */}
-                            <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-slate-950/20 backdrop-blur-md">
+                            <div className="px-5 md:px-6 py-3.5 border-b border-line flex items-center justify-between bg-white shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex items-center justify-center text-slate-200 font-semibold relative shadow-inner">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedUser(null)}
+                                        className="md:hidden p-1.5 -ml-1 text-muted hover:text-ink hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                        aria-label="Back to conversations"
+                                    >
+                                        <ArrowLeft size={20} />
+                                    </button>
+                                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative border border-line shrink-0">
                                         <span className="text-xs">
-                                            {selectedUser.fullName
-                                                .split(' ')
-                                                .map((n) => n[0])
-                                                .join('')}
+                                            {selectedUser.profilePic || getInitials(selectedUser.fullName)}
                                         </span>
                                     </div>
                                     <div className="text-left">
-                                        <h4 className="text-base font-semibold text-slate-200">
+                                        <h4 className="text-sm md:text-base font-semibold tracking-tight text-ink">
                                             {selectedUser.fullName}
                                         </h4>
-                                        <p className="text-[10px] text-emerald-400 flex items-center gap-1">
-                                            <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-pulse" />
                                             active now
                                         </p>
                                     </div>
@@ -233,54 +239,71 @@ export default function ChatPage() {
                             </div>
 
                             {/* Message History list */}
-                            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-950/5">
-                                {currentThread.map((msg) => {
-                                    const isMe = msg.senderId === 'me';
-                                    return (
-                                        <div
-                                            key={msg._id}
-                                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                                        >
+                            <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-4 bg-canvas custom-scrollbar flex flex-col">
+                                <div className="flex items-center justify-center my-2">
+                                    <div className="bg-white border border-line text-muted text-xs px-3 py-1 rounded-full shadow-xs font-medium">
+                                        Today, End-to-End Encrypted
+                                    </div>
+                                </div>
+                                {isLoadingMessages ? (
+                                    <div className="flex-1 flex items-center justify-center text-xs text-muted">
+                                        Loading messages...
+                                    </div>
+                                ) : messages.length === 0 ? (
+                                    <div className="flex-1 flex items-center justify-center text-xs text-muted">
+                                        No messages yet. Say hello!
+                                    </div>
+                                ) : (
+                                    messages.map((msg) => {
+                                        const isMe = msg.senderId === authUser?._id;
+                                        return (
                                             <div
-                                                className={`max-w-[70%] rounded-2xl px-4 py-3.5 text-sm leading-relaxed text-left border bg-slate-900/40 text-slate-200 border-slate-850 shadow-md ${
-                                                    isMe
-                                                        ? 'rounded-tr-none border-blue-500/10 shadow-blue-500/2'
-                                                        : 'rounded-tl-none'
-                                                }`}
+                                                key={msg._id}
+                                                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                             >
-                                                <p>{msg.text}</p>
-                                                <span className="text-[10px] text-slate-500 block text-right mt-1.5">
-                                                    {new Date(msg.createdAt).toLocaleTimeString(
-                                                        [],
-                                                        { hour: '2-digit', minute: '2-digit' },
-                                                    )}
-                                                </span>
+                                                <div
+                                                    className={`animate-message max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-left border border-line bg-white text-ink shadow-xs ${
+                                                        isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                                                    }`}
+                                                >
+                                                    <p>{msg.text}</p>
+                                                    <div className="flex items-center justify-end gap-1 mt-1 text-[11px] text-subtle">
+                                                        <span>
+                                                            {new Date(msg.createdAt).toLocaleTimeString(
+                                                                [],
+                                                                { hour: '2-digit', minute: '2-digit' },
+                                                            )}
+                                                        </span>
+                                                        {isMe && <CheckCheck size={14} className="text-subtle" />}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
                             {/* Input Sender controls */}
                             <form
                                 onSubmit={handleSendMessage}
-                                className="p-4 border-t border-slate-900 bg-slate-950/20"
+                                className="p-3 md:p-4 border-t border-line bg-white shrink-0"
                             >
-                                <div className="flex items-stretch gap-2">
+                                <div className="flex items-center gap-2 md:gap-3">
                                     <input
                                         type="text"
                                         placeholder="Type a message..."
                                         value={inputMessage}
                                         onChange={(e) => setInputMessage(e.target.value)}
-                                        className="flex-1 bg-slate-900/10 border border-slate-800/80 rounded-xl px-4 py-3.5 text-base text-slate-100 placeholder-slate-500 outline-none transition-all duration-200 focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10 focus:bg-slate-950/60 shadow-inner"
+                                        className="flex-1 bg-slate-50 border border-line text-ink placeholder:text-subtle rounded-xl px-4 py-2.5 md:py-3 text-xs md:text-sm outline-none transition-all focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
                                     />
                                     <button
                                         type="submit"
-                                        disabled={!inputMessage.trim()}
-                                        className="px-5 bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-md shadow-blue-500/10 transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] flex items-center justify-center shrink-0"
+                                        disabled={!inputMessage.trim() || isSendingMessage}
+                                        className="bg-primary hover:bg-primary-hover disabled:opacity-40 text-white px-4 md:px-5 py-2.5 md:py-3 rounded-xl flex items-center gap-2 font-medium text-xs md:text-sm shadow-sm transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
                                     >
-                                        <SendHorizontal size={20} />
+                                        <span>Send</span>
+                                        <SendHorizontal size={16} className="text-teal-200" />
                                     </button>
                                 </div>
                             </form>
@@ -288,16 +311,13 @@ export default function ChatPage() {
                     ) : (
                         /* Welcome Screen Placeholder */
                         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none animate-fade-in relative overflow-hidden">
-                            {/* Ambient back glow behind logo */}
-                            <div className="absolute w-[200px] h-[200px] rounded-full bg-blue-500/5 blur-[80px] pointer-events-none" />
-
-                            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 shadow-[0_0_40px_rgba(59,130,246,0.12)] border-t-white/10 animate-float z-10">
+                            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-accent-mint mb-6 shadow-btn animate-float z-10">
                                 <MessageSquare size={32} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-200 mb-2 z-10">
+                            <h3 className="text-lg font-bold text-ink mb-2 z-10">
                                 Welcome to NexTalk
                             </h3>
-                            <p className="text-xs text-slate-500 max-w-xs leading-relaxed z-10">
+                            <p className="text-xs text-muted max-w-xs leading-relaxed z-10">
                                 Select a chat or contact from the left list to begin messaging and
                                 sharing.
                             </p>
