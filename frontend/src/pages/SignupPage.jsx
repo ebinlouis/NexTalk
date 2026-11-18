@@ -35,12 +35,12 @@ export default function SignupPage() {
         if (formData.password !== formData.confirmPassword)
             return toast.error('Passwords do not match');
 
-        await signup({
+        const result = await signup({
             fullName: formData.name,
             email: formData.email,
             password: formData.password,
         });
-        navigate('/login');
+        if (result?.success) navigate('/login');
     };
 
     return (
