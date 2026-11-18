@@ -255,7 +255,7 @@ export default function ChatPage() {
                                     </div>
                                 ) : (
                                     messages.map((msg) => {
-                                        const isMe = msg.senderId === authUser?._id;
+                                        const isMe = msg.senderId === (authUser?._id || authUser?.id);
                                         return (
                                             <div
                                                 key={msg._id}
