@@ -12,7 +12,19 @@ import NoChatSelected from '../components/chat/NoChatSelected';
 export default function ChatPage() {
     const navigate = useNavigate();
     const { logout, authUser } = useAuthStore();
-    const { contacts, getContacts, users, getUsers, messages, isLoadingMessages, getMessages, sendMessage, isSendingMessage } = useChatStore();
+    const {
+        contacts,
+        getContacts,
+        users,
+        getUsers,
+        messages,
+        isLoadingMessages,
+        getMessages,
+        sendMessage,
+        isSendingMessage,
+        subscribeToMessages,
+        unsubscribeFromMessages,
+    } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
@@ -31,10 +43,13 @@ export default function ChatPage() {
     }, []);
 
     useEffect(() => {
-        if (!selectedUser?._id) return;
-        getMessages(selectedUser._id).then((res) => {
-            if (!res?.success && res?.error) toast.error(res.error);
-        });
+        if (selectedUser?._id) {
+            getMessages(selectedUser._id).then((res) => {
+                if (!res?.success && res?.error) toast.error(res.error);
+            });
+        }
+        subscribeToMessages(selectedUser?._id);
+        return () => unsubscribeFromMessages();
     }, [selectedUser?._id]);
 
     const handleLogout = async () => {

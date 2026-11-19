@@ -1,10 +1,13 @@
 import { ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
+import { useAuthStore } from '../../store/useAuthStore';
 
 /**
  * Top bar of the active conversation pane with mobile back navigation and partner details.
  */
 export default function ChatHeader({ selectedUser, onBack }) {
+    const { onlineUsers } = useAuthStore();
+    const isOnline = onlineUsers.includes(selectedUser?._id?.toString());
     return (
         <div className="px-5 md:px-6 py-3.5 border-b border-line flex items-center justify-between bg-white shrink-0">
             <div className="flex items-center gap-3">
@@ -37,8 +40,12 @@ export default function ChatHeader({ selectedUser, onBack }) {
                         </span>
                     </div>
                     <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-                        Online
+                        <span
+                            className={`w-1.5 h-1.5 rounded-full inline-block ${
+                                isOnline ? 'bg-success animate-pulse' : 'bg-slate-300'
+                            }`}
+                        />
+                        {isOnline ? 'Online' : 'Offline'}
                     </p>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../lib/api';
+import { useAuthStore } from './useAuthStore';
 
 export const useChatStore = create((set) => ({
     contacts: [],
@@ -38,6 +39,14 @@ export const useChatStore = create((set) => ({
         set({ isLoadingMessages: true });
         try {
             const res = await api.get(`/api/messages/${userId}`);
+            const authUser = useAuthStore.getState().authUser;
+            const socket = useAuthStore.getState().socket;
+            if (socket && authUser) {
+                socket.emit('markMessagesAsSeen', {
+                    senderId: userId,
+                    receiverId: authUser._id || authUser.id,
+                });
+            }
             set((state) => ({
                 messages: res.data.data,
                 users: state.users.map((u) => (u._id === userId ? { ...u, unreadCount: 0 } : u)),
@@ -80,5 +89,53 @@ export const useChatStore = create((set) => ({
         } finally {
             set({ isSendingMessage: false });
         }
+    },
+
+    subscribeToMessages: (selectedUserId) => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.off('newMessage');
+        socket.on('newMessage', (newMessage) => {
+            const isFromSelected = newMessage.senderId === selectedUserId;
+            if (isFromSelected) {
+                const authUser = useAuthStore.getState().authUser;
+                socket.emit('markMessagesAsSeen', {
+                    senderId: selectedUserId,
+                    receiverId: authUser?._id || authUser?.id,
+                });
+            }
+            set((state) => ({
+                messages: isFromSelected ? [...state.messages, newMessage] : state.messages,
+                users: state.users.map((u) =>
+                    u._id === newMessage.senderId
+                        ? {
+                              ...u,
+                              lastMessage: {
+                                  text: newMessage.text,
+                                  senderId: newMessage.senderId,
+                                  createdAt: newMessage.createdAt,
+                              },
+                              unreadCount: isFromSelected ? 0 : (u.unreadCount || 0) + 1,
+                          }
+                        : u
+                ),
+            }));
+        });
+
+        socket.off('messagesSeen');
+        socket.on('messagesSeen', ({ partnerId }) => {
+            if (partnerId === selectedUserId) {
+                set((state) => ({
+                    messages: state.messages.map((msg) => ({ ...msg, seen: true })),
+                }));
+            }
+        });
+    },
+
+    unsubscribeFromMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        socket?.off('newMessage');
+        socket?.off('messagesSeen');
     },
 }));
