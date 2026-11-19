@@ -71,7 +71,7 @@ export const getChattedUsersService = async (currentUserId) => {
 export const getMessagesService = async (currentUserId, partnerId) => {
     await Message.updateMany(
         { senderId: partnerId, receiverId: currentUserId, seen: false },
-        { $set: { seen: true } }
+        { $set: { seen: true, seenAt: new Date() } }
     );
 
     const messages = await Message.find({

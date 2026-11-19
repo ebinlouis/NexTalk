@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCheck } from 'lucide-react';
+import MessageInfoModal from './MessageInfoModal';
 
 /**
  * Scrollable conversation feed with encryption badge, loading/empty states, and auto-scroll.
  */
 export default function MessageList({ messages, isLoading, currentUserId, partnerName }) {
     const messagesEndRef = useRef(null);
+    const [selectedMessageInfo, setSelectedMessageInfo] = useState(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,9 +42,11 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                 </span>
                             )}
                             <div
-                                className={`animate-message max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-left border border-slate-200/80 bg-white text-ink shadow-xs ${
+                                onClick={() => setSelectedMessageInfo(msg)}
+                                className={`animate-message max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-left border border-slate-200/80 bg-white text-ink shadow-xs cursor-pointer hover:border-slate-300 transition-all ${
                                     isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'
                                 }`}
+                                title="Click to view message info"
                             >
                                 <p className="text-slate-800">{msg.text}</p>
                                 <div className="flex items-center justify-end gap-1.5 mt-1 text-[11px] text-muted">
@@ -52,7 +56,13 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                             minute: '2-digit',
                                         })}
                                     </span>
-                                    {isMe && <CheckCheck size={14} className="text-muted" />}
+                                    {isMe && (
+                                        <CheckCheck
+                                            size={14}
+                                            className={msg.seen ? 'text-primary' : 'text-slate-400'}
+                                            title={msg.seen ? 'Read' : 'Delivered'}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -60,6 +70,13 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                 })
             )}
             <div ref={messagesEndRef} />
+
+            {selectedMessageInfo && (
+                <MessageInfoModal
+                    message={selectedMessageInfo}
+                    onClose={() => setSelectedMessageInfo(null)}
+                />
+            )}
         </div>
     );
 }
