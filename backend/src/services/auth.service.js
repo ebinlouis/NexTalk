@@ -1,7 +1,7 @@
 import User from '../models/user.model.js';
 import CustomError from '../utils/error.js';
 import { hashPassword, comparePassword } from '../utils/bcrypt.js';
-import { clearTokensCookies } from '../utils/jwt.js';
+import { clearTokensCookies, verifyRefreshToken } from '../utils/jwt.js';
 
 export const signupService = async (data) => {
     const { fullName, email, password } = data;
@@ -74,4 +74,20 @@ export const loginService = async (data) => {
 export const logoutService = (res) => {
     clearTokensCookies(res);
     return null;
+};
+
+export const refreshTokenService = async (refreshToken) => {
+    if (!refreshToken) throw new CustomError('No refresh token provided', 401);
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded) throw new CustomError('Invalid or expired refresh token', 401);
+
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user) throw new CustomError('User not found', 404);
+
+    return {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePic: user.profilePic,
+    };
 };

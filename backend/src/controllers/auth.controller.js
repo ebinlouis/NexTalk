@@ -1,4 +1,4 @@
-import { loginService, logoutService, signupService } from '../services/auth.service.js';
+import { loginService, logoutService, signupService, refreshTokenService } from '../services/auth.service.js';
 import { generateAndSetTokens } from '../utils/jwt.js';
 
 export const signup = async (req, res) => {
@@ -63,6 +63,23 @@ export const checkAuth = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             message: 'Internal Server Error',
+        });
+    }
+};
+
+export const refreshToken = async (req, res) => {
+    try {
+        const token = req.cookies.refreshToken;
+        const result = await refreshTokenService(token);
+        generateAndSetTokens(res, result.id);
+        res.status(200).json({
+            success: true,
+            message: 'Token refreshed successfully',
+            data: result,
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
         });
     }
 };
