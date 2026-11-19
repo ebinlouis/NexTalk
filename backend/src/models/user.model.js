@@ -20,6 +20,12 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
+        refreshTokens: [
+            {
+                tokenHash: { type: String, required: true },
+                createdAt: { type: Date, default: Date.now },
+            },
+        ],
     },
     {
         timestamps: true,

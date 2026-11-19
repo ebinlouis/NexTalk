@@ -1,4 +1,4 @@
-import { X, CheckCheck } from 'lucide-react';
+import { X, Check, CheckCheck } from 'lucide-react';
 
 /**
  * WhatsApp-style modal displaying delivery and read status timestamps for a message.
@@ -6,12 +6,15 @@ import { X, CheckCheck } from 'lucide-react';
 export default function MessageInfoModal({ message, onClose }) {
     if (!message) return null;
 
-    const sentTime = message.createdAt
-        ? new Date(message.createdAt).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-          })
-        : '';
+    const deliveredTime =
+        message.delivered && message.deliveredAt
+            ? new Date(message.deliveredAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+              })
+            : message.delivered
+              ? 'Delivered'
+              : 'Not delivered yet';
 
     const readTime =
         message.seen && message.seenAt
@@ -57,7 +60,7 @@ export default function MessageInfoModal({ message, onClose }) {
                             <div className="flex items-center gap-2.5">
                                 <CheckCheck
                                     size={18}
-                                    className={message.seen ? 'text-primary' : 'text-slate-300'}
+                                    className={message.seen ? 'text-emerald-500' : 'text-slate-300'}
                                 />
                                 <div>
                                     <p className="text-xs font-semibold text-ink">Read</p>
@@ -71,10 +74,14 @@ export default function MessageInfoModal({ message, onClose }) {
                         {/* Delivered Status */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <CheckCheck size={18} className="text-slate-400" />
+                                {message.delivered ? (
+                                    <CheckCheck size={18} className="text-slate-400" />
+                                ) : (
+                                    <Check size={18} className="text-slate-300" />
+                                )}
                                 <div>
                                     <p className="text-xs font-semibold text-ink">Delivered</p>
-                                    <p className="text-[11px] text-muted">{sentTime}</p>
+                                    <p className="text-[11px] text-muted">{deliveredTime}</p>
                                 </div>
                             </div>
                         </div>
