@@ -38,7 +38,10 @@ export const useChatStore = create((set) => ({
         set({ isLoadingMessages: true });
         try {
             const res = await api.get(`/api/messages/${userId}`);
-            set({ messages: res.data.data });
+            set((state) => ({
+                messages: res.data.data,
+                users: state.users.map((u) => (u._id === userId ? { ...u, unreadCount: 0 } : u)),
+            }));
             return { success: true };
         } catch (error) {
             const message = error.response?.data?.message || 'Failed to load messages';
@@ -53,7 +56,22 @@ export const useChatStore = create((set) => ({
         set({ isSendingMessage: true });
         try {
             const res = await api.post(`/api/messages/send/${userId}`, messageData);
-            set((state) => ({ messages: [...state.messages, res.data.data] }));
+            const sentMsg = res.data.data;
+            set((state) => ({
+                messages: [...state.messages, sentMsg],
+                users: state.users.map((u) =>
+                    u._id === userId
+                        ? {
+                              ...u,
+                              lastMessage: {
+                                  text: sentMsg.text,
+                                  senderId: sentMsg.senderId,
+                                  createdAt: sentMsg.createdAt,
+                              },
+                          }
+                        : u
+                ),
+            }));
             return { success: true };
         } catch (error) {
             const message = error.response?.data?.message || 'Failed to send message';

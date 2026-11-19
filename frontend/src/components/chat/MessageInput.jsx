@@ -1,4 +1,4 @@
-import { SendHorizontal } from 'lucide-react';
+import { SendHorizontal, Paperclip, Smile } from 'lucide-react';
 
 /**
  * Bottom message composer form with send button.
@@ -6,7 +6,21 @@ import { SendHorizontal } from 'lucide-react';
 export default function MessageInput({ value, onChange, onSubmit, isSending }) {
     return (
         <form onSubmit={onSubmit} className="p-3 md:p-4 border-t border-line bg-white shrink-0">
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 md:gap-2">
+                <button
+                    type="button"
+                    className="p-2 text-muted hover:text-ink hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+                    title="Attach file"
+                >
+                    <Paperclip size={18} />
+                </button>
+                <button
+                    type="button"
+                    className="p-2 text-muted hover:text-ink hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+                    title="Insert emoji"
+                >
+                    <Smile size={18} />
+                </button>
                 <input
                     type="text"
                     placeholder="Type a message..."

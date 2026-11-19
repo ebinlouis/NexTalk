@@ -93,6 +93,7 @@ export default function ChatPage() {
                                 messages={messages}
                                 isLoading={isLoadingMessages}
                                 currentUserId={authUser?._id || authUser?.id}
+                                partnerName={selectedUser?.fullName}
                             />
                             <MessageInput
                                 value={inputMessage}
