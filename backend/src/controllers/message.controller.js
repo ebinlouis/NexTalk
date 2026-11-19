@@ -6,6 +6,7 @@ import {
     getChattedUsersService,
     getMessagesService,
 } from '../services/message.service.js';
+import { getReceiverSocketId, io } from '../lib/socket.js';
 
 export const getContacts = async (req, res) => {
     try {
@@ -28,6 +29,11 @@ export const sendMessage = async (req, res) => {
         const senderId = req.user._id;
 
         const newMessage = await sendMessageService(senderId, receiverId, text, image);
+
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit('newMessage', newMessage);
+        }
 
         res.status(201).json({
             success: true,

@@ -1,5 +1,6 @@
 import { LogOut, Search } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const renderAvatar = (user, textClass = 'text-xs') =>
     user?.profilePic ? (
@@ -26,6 +27,7 @@ export default function ChatSidebar({
     onSelectContact,
     onLogout,
 }) {
+    const { onlineUsers } = useAuthStore();
     const tabs = [
         { id: 'chats', label: 'Chats', count: users.length },
         { id: 'contacts', label: 'Contacts', count: contacts.length },
@@ -157,7 +159,7 @@ export default function ChatSidebar({
                                   <div className="flex items-center gap-3 min-w-0">
                                       <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
                                           {renderAvatar(chat, 'text-xs')}
-                                          {chat.status === 'Online' && (
+                                          {onlineUsers.includes(chat._id?.toString()) && (
                                               <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                                           )}
                                       </div>
@@ -196,6 +198,9 @@ export default function ChatSidebar({
                               <div className="flex items-center gap-3 min-w-0">
                                   <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0">
                                       {renderAvatar(contact, 'text-xs')}
+                                      {onlineUsers.includes(contact._id?.toString()) && (
+                                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border-2 border-white" />
+                                      )}
                                   </div>
                                   <div className="min-w-0">
                                       <h5 className="text-xs font-semibold text-ink group-hover:text-primary transition-colors truncate">
