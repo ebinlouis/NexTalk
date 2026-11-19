@@ -28,33 +28,52 @@ export const sendMessageService = async (senderId, receiverId, text, image) => {
 export const getChattedUsersService = async (currentUserId) => {
     const userId = new mongoose.Types.ObjectId(currentUserId);
 
-    const chatPartners = await Message.aggregate([
+    const conversations = await Message.aggregate([
+        { $match: { $or: [{ senderId: userId }, { receiverId: userId }] } },
+        { $sort: { createdAt: -1 } },
         {
-            $match: {
-                $or: [{ senderId: userId }, { receiverId: userId }],
-            },
-        },
-        {
-            $project: {
-                partnerId: {
-                    $cond: [{ $eq: ['$senderId', userId] }, '$receiverId', '$senderId'],
+            $group: {
+                _id: { $cond: [{ $eq: ['$senderId', userId] }, '$receiverId', '$senderId'] },
+                lastMessage: { $first: '$$ROOT' },
+                unreadCount: {
+                    $sum: {
+                        $cond: [
+                            { $and: [{ $eq: ['$receiverId', userId] }, { $eq: ['$seen', false] }] },
+                            1,
+                            0,
+                        ],
+                    },
                 },
             },
         },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'partner' } },
+        { $unwind: '$partner' },
         {
-            $group: {
-                _id: '$partnerId',
+            $project: {
+                _id: '$partner._id',
+                fullName: '$partner.fullName',
+                email: '$partner.email',
+                profilePic: '$partner.profilePic',
+                lastMessage: {
+                    text: '$lastMessage.text',
+                    senderId: '$lastMessage.senderId',
+                    createdAt: '$lastMessage.createdAt',
+                },
+                unreadCount: '$unreadCount',
             },
         },
+        { $sort: { 'lastMessage.createdAt': -1 } },
     ]);
 
-    const chattedUserIds = chatPartners.map((partner) => partner._id);
-
-    const users = await User.find({ _id: { $in: chattedUserIds } }).select('-password');
-    return users;
+    return conversations;
 };
 
 export const getMessagesService = async (currentUserId, partnerId) => {
+    await Message.updateMany(
+        { senderId: partnerId, receiverId: currentUserId, seen: false },
+        { $set: { seen: true, seenAt: new Date() } }
+    );
+
     const messages = await Message.find({
         $or: [
             { senderId: currentUserId, receiverId: partnerId },

@@ -1,5 +1,16 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
+
+const renderAvatar = (user, textClass = 'text-xs') =>
+    user?.profilePic ? (
+        <img
+            src={user.profilePic}
+            alt={user.fullName || ''}
+            className="w-full h-full object-cover rounded-full"
+        />
+    ) : (
+        <span className={textClass}>{getInitials(user?.fullName)}</span>
+    );
 
 /**
  * Left chat dashboard sidebar with user profile header, segmented tabs, and user/contact lists.
@@ -30,10 +41,8 @@ export default function ChatSidebar({
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 shrink-0">
-                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line">
-                            <span className="text-sm">
-                                {currentUser.profilePic || getInitials(currentUser.fullName)}
-                            </span>
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line overflow-hidden">
+                            {renderAvatar(currentUser, 'text-sm')}
                         </div>
                         <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                     </div>
@@ -41,16 +50,32 @@ export default function ChatSidebar({
                         <h4 className="text-sm font-semibold tracking-tight text-ink">
                             {currentUser.fullName}
                         </h4>
-                        <p className="text-xs text-muted mt-0.5">{currentUser.email}</p>
+                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
+                            Online
+                        </p>
                     </div>
                 </div>
                 <button
+                    type="button"
                     onClick={onLogout}
-                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-all duration-200 cursor-pointer focus:outline-none"
-                    title="Logout"
+                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer focus:outline-none"
+                    title="Sign Out"
                 >
                     <LogOut size={18} />
                 </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="px-3.5 py-2.5 border-b border-slate-100 bg-white shrink-0">
+                <div className="relative flex items-center">
+                    <Search size={15} className="absolute left-3 text-muted pointer-events-none" />
+                    <input
+                        type="text"
+                        placeholder="Search chats or people..."
+                        className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-8 pr-3 py-2 text-xs text-ink placeholder:text-muted focus:outline-none focus:border-primary transition-all"
+                    />
+                </div>
             </div>
 
             {/* Navigation Tab Buttons */}
@@ -84,48 +109,84 @@ export default function ChatSidebar({
                 </div>
             </div>
 
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-slate-100 bg-white shrink-0">
+                {['All', 'Unread', 'Direct', 'Groups'].map((item) => (
+                    <button
+                        key={item}
+                        type="button"
+                        className={`px-3 py-1 rounded-full text-xs transition-colors cursor-pointer ${
+                            item === 'All'
+                                ? 'bg-ink text-white font-medium'
+                                : 'text-muted hover:text-ink bg-slate-100/70 hover:bg-slate-100'
+                        }`}
+                    >
+                        {item}
+                    </button>
+                ))}
+            </div>
+
             {/* Users/Contacts List */}
             <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 bg-white custom-scrollbar">
                 {activeTab === 'chats'
-                    ? users.map((chat) => (
-                          <button
-                              key={chat._id}
-                              onClick={() => onSelectChat(chat)}
-                              className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-150 border-l-4 cursor-pointer focus:outline-none group ${
-                                  selectedUser?._id === chat._id
-                                      ? 'bg-teal-50/70 border-primary shadow-xs'
-                                      : 'border-transparent hover:bg-slate-50'
-                              }`}
-                          >
-                              <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
-                                      <span className="text-xs">
-                                          {chat.profilePic || getInitials(chat.fullName)}
-                                      </span>
-                                      {chat.status === 'Online' && (
-                                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
+                    ? users.map((chat) => {
+                          const isLastFromMe =
+                              chat.lastMessage?.senderId?.toString() ===
+                              (currentUser?._id || currentUser?.id)?.toString();
+                          const previewText = chat.lastMessage
+                              ? isLastFromMe
+                                  ? `You: ${chat.lastMessage.text}`
+                                  : chat.lastMessage.text
+                              : 'No messages yet';
+                          const formattedTime = chat.lastMessage?.createdAt
+                              ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                })
+                              : '';
+                          return (
+                              <button
+                                  key={chat._id}
+                                  onClick={() => onSelectChat(chat)}
+                                  className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all duration-150 border-l-4 cursor-pointer focus:outline-none group ${
+                                      selectedUser?._id === chat._id
+                                          ? 'bg-teal-50/70 border-primary shadow-xs'
+                                          : 'border-transparent hover:bg-slate-50'
+                                  }`}
+                              >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
+                                          {renderAvatar(chat, 'text-xs')}
+                                          {chat.status === 'Online' && (
+                                              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
+                                          )}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                          <h5
+                                              className={`text-xs font-semibold truncate transition-colors ${
+                                                  selectedUser?._id === chat._id
+                                                      ? 'text-primary'
+                                                      : 'text-ink'
+                                              }`}
+                                          >
+                                              {chat.fullName}
+                                          </h5>
+                                          <p className="text-xs text-muted truncate max-w-[180px] leading-tight mt-0.5">
+                                              {previewText}
+                                          </p>
+                                      </div>
+                                  </div>
+                                  <div className="text-right shrink-0 ml-2 flex flex-col items-end gap-1">
+                                      <span className="text-[11px] text-subtle">{formattedTime}</span>
+                                      {chat.unreadCount > 0 && (
+                                          <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                              {chat.unreadCount}
+                                          </span>
                                       )}
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                      <h5
-                                          className={`text-xs font-semibold truncate transition-colors ${
-                                              selectedUser?._id === chat._id
-                                                  ? 'text-primary'
-                                                  : 'text-ink'
-                                          }`}
-                                      >
-                                          {chat.fullName}
-                                      </h5>
-                                      <p className="text-xs text-muted truncate max-w-[180px] leading-tight mt-0.5">
-                                          {chat.lastMessage}
-                                      </p>
-                                  </div>
-                              </div>
-                              <div className="text-right shrink-0 ml-2">
-                                  <span className="text-[11px] text-subtle">{chat.time}</span>
-                              </div>
-                          </button>
-                      ))
+                              </button>
+                          );
+                      })
                     : contacts.map((contact) => (
                           <button
                               key={contact._id}
@@ -134,9 +195,7 @@ export default function ChatSidebar({
                           >
                               <div className="flex items-center gap-3 min-w-0">
                                   <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0">
-                                      <span className="text-xs">
-                                          {contact.profilePic || getInitials(contact.fullName)}
-                                      </span>
+                                      {renderAvatar(contact, 'text-xs')}
                                   </div>
                                   <div className="min-w-0">
                                       <h5 className="text-xs font-semibold text-ink group-hover:text-primary transition-colors truncate">
