@@ -10,7 +10,7 @@ export const getAllContactsService = async (currentUserId) => {
     return users;
 };
 
-export const sendMessageService = async (senderId, receiverId, text, image) => {
+export const sendMessageService = async (senderId, receiverId, text, image, isDelivered = false) => {
     if (!text && !image) {
         throw new CustomError('Message content (text or image) is required', 400);
     }
@@ -20,6 +20,8 @@ export const sendMessageService = async (senderId, receiverId, text, image) => {
         receiverId,
         text,
         image,
+        delivered: isDelivered,
+        deliveredAt: isDelivered ? new Date() : null,
     });
 
     return newMessage;

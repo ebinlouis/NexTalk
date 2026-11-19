@@ -40,7 +40,7 @@ export default function ChatPage() {
     useEffect(() => {
         getContacts();
         getUsers();
-    }, []);
+    }, [getContacts, getUsers]);
 
     useEffect(() => {
         if (selectedUser?._id) {
@@ -50,7 +50,7 @@ export default function ChatPage() {
         }
         subscribeToMessages(selectedUser?._id);
         return () => unsubscribeFromMessages();
-    }, [selectedUser?._id]);
+    }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
     const handleLogout = async () => {
         const { success } = await logout();

@@ -123,6 +123,15 @@ export const useChatStore = create((set) => ({
             }));
         });
 
+        socket.off('messagesDelivered');
+        socket.on('messagesDelivered', ({ partnerId }) => {
+            if (partnerId === selectedUserId) {
+                set((state) => ({
+                    messages: state.messages.map((msg) => ({ ...msg, delivered: true })),
+                }));
+            }
+        });
+
         socket.off('messagesSeen');
         socket.on('messagesSeen', ({ partnerId }) => {
             if (partnerId === selectedUserId) {
@@ -136,6 +145,7 @@ export const useChatStore = create((set) => ({
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket?.off('newMessage');
+        socket?.off('messagesDelivered');
         socket?.off('messagesSeen');
     },
 }));

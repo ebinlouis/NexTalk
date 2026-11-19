@@ -28,9 +28,10 @@ export const sendMessage = async (req, res) => {
         const receiverId = req.params.id;
         const senderId = req.user._id;
 
-        const newMessage = await sendMessageService(senderId, receiverId, text, image);
-
         const receiverSocketId = getReceiverSocketId(receiverId);
+        const isDelivered = !!receiverSocketId;
+        const newMessage = await sendMessageService(senderId, receiverId, text, image, isDelivered);
+
         if (receiverSocketId) {
             io.to(receiverSocketId).emit('newMessage', newMessage);
         }

@@ -18,7 +18,7 @@ export const useAuthStore = create((set, get) => ({
             const res = await api.get('/api/auth/check');
             set({ authUser: res.data.data });
             get().connectSocket();
-        } catch (error) {
+        } catch {
             set({ authUser: null });
         } finally {
             set({ isCheckingAuth: false });
@@ -64,7 +64,7 @@ export const useAuthStore = create((set, get) => ({
             set({ authUser: null });
             toast.success('Logged out successfully');
             return { success: true };
-        } catch (error) {
+        } catch {
             toast.error('Failed to logout');
             return { success: false };
         }

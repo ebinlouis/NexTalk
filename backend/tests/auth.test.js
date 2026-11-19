@@ -157,4 +157,63 @@ describe('Authentication Module Tests', () => {
             expect(refreshTokenExpired).toBe(true);
         });
     });
+
+    describe('POST /api/auth/refresh', () => {
+        it('should rotate tokens and return 200 with new cookies', async () => {
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: 'alice@example.com',
+                password: 'securepassword',
+            });
+            const refreshCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('refreshToken='));
+
+            const res = await request(app).post('/api/auth/refresh').set('Cookie', [refreshCookie]);
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.headers['set-cookie']?.some((c) => c.startsWith('accessToken='))).toBe(true);
+        });
+
+        it('should return 401 if refresh token is missing or expired', async () => {
+            const res = await request(app).post('/api/auth/refresh');
+            expect(res.statusCode).toBe(401);
+        });
+
+        it('should detect token replay attack and reject with 401', async () => {
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: 'alice@example.com',
+                password: 'securepassword',
+            });
+            const oldCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('refreshToken='));
+
+            await request(app).post('/api/auth/refresh').set('Cookie', [oldCookie]);
+            const replayRes = await request(app).post('/api/auth/refresh').set('Cookie', [oldCookie]);
+            expect(replayRes.statusCode).toBe(401);
+        });
+    });
+
+    describe('GET /api/auth/check', () => {
+        it('should return 401 when no token or expired token is provided', async () => {
+            const res = await request(app).get('/api/auth/check');
+            expect(res.statusCode).toBe(401);
+        });
+
+        it('should return 200 and user data when valid access token cookie is provided', async () => {
+            const loginRes = await request(app).post('/api/auth/login').send({
+                email: 'alice@example.com',
+                password: 'securepassword',
+            });
+            const accessCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('accessToken='));
+
+            const res = await request(app).get('/api/auth/check').set('Cookie', [accessCookie]);
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.email).toBe('alice@example.com');
+        });
+    });
+
+    describe('GET /api/auth/check', () => {
+        it('should return 401 when no token or expired token is provided', async () => {
+            const res = await request(app).get('/api/auth/check');
+            expect(res.statusCode).toBe(401);
+        });
+    });
 });

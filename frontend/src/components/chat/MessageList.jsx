@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { CheckCheck } from 'lucide-react';
+import { Check, CheckCheck } from 'lucide-react';
 import MessageInfoModal from './MessageInfoModal';
 
 /**
@@ -57,11 +57,25 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                         })}
                                     </span>
                                     {isMe && (
-                                        <CheckCheck
-                                            size={14}
-                                            className={msg.seen ? 'text-primary' : 'text-slate-400'}
-                                            title={msg.seen ? 'Read' : 'Delivered'}
-                                        />
+                                        msg.seen ? (
+                                            <CheckCheck
+                                                size={14}
+                                                className="text-emerald-500"
+                                                title="Read"
+                                            />
+                                        ) : msg.delivered ? (
+                                            <CheckCheck
+                                                size={14}
+                                                className="text-slate-400"
+                                                title="Delivered"
+                                            />
+                                        ) : (
+                                            <Check
+                                                size={14}
+                                                className="text-slate-400"
+                                                title="Sent"
+                                            />
+                                        )
                                     )}
                                 </div>
                             </div>
