@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
@@ -24,12 +24,17 @@ export default function ChatPage() {
         isSendingMessage,
         subscribeToMessages,
         unsubscribeFromMessages,
+        sendTyping,
+        sendStopTyping,
     } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
     const [selectedUser, setSelectedUser] = useState(null);
     const [inputMessage, setInputMessage] = useState('');
+    const [inChatSearch, setInChatSearch] = useState('');
+    const [isChatSearchOpen, setIsChatSearchOpen] = useState(false);
+    const typingTimeoutRef = useRef(null);
 
     const currentUser = authUser || {
         fullName: 'Loading...',
@@ -64,11 +69,23 @@ export default function ChatPage() {
         setActiveTab('chats');
     };
 
+    const handleTyping = () => {
+        if (!selectedUser?._id) return;
+        sendTyping(selectedUser._id);
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            sendStopTyping(selectedUser._id);
+        }, 1500);
+    };
+
     // Handle message sending
     const handleSendMessage = async (e) => {
         e.preventDefault();
         const trimmed = inputMessage.trim();
         if (!trimmed || !selectedUser || isSendingMessage) return;
+
+        clearTimeout(typingTimeoutRef.current);
+        sendStopTyping(selectedUser._id);
 
         const isExistingChat = users.some((u) => u._id === selectedUser._id);
         const res = await sendMessage(selectedUser._id, { text: trimmed });
@@ -103,18 +120,24 @@ export default function ChatPage() {
                             <ChatHeader
                                 selectedUser={selectedUser}
                                 onBack={() => setSelectedUser(null)}
+                                searchQuery={inChatSearch}
+                                onSearchChange={setInChatSearch}
+                                isSearchOpen={isChatSearchOpen}
+                                onToggleSearch={() => setIsChatSearchOpen((prev) => !prev)}
                             />
                             <MessageList
                                 messages={messages}
                                 isLoading={isLoadingMessages}
                                 currentUserId={authUser?._id || authUser?.id}
                                 partnerName={selectedUser?.fullName}
+                                searchQuery={inChatSearch}
                             />
                             <MessageInput
                                 value={inputMessage}
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 onSubmit={handleSendMessage}
                                 isSending={isSendingMessage}
+                                onTyping={handleTyping}
                             />
                         </>
                     ) : (

@@ -1,12 +1,30 @@
-import { ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, Search, X } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useChatStore } from '../../store/useChatStore';
+
+const formatLastSeen = (dateString) => {
+    if (!dateString) return 'Offline';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'Offline';
+    const isToday = new Date().toDateString() === d.toDateString();
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return isToday ? `Last seen today at ${timeStr}` : `Last seen ${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeStr}`;
+};
 
 /**
  * Top bar of the active conversation pane with mobile back navigation and partner details.
  */
-export default function ChatHeader({ selectedUser, onBack }) {
+export default function ChatHeader({
+    selectedUser,
+    onBack,
+    searchQuery = '',
+    onSearchChange,
+    isSearchOpen = false,
+    onToggleSearch,
+}) {
     const { onlineUsers } = useAuthStore();
+    const { isPartnerTyping } = useChatStore();
     const isOnline = onlineUsers.includes(selectedUser?._id?.toString());
     return (
         <div className="px-5 md:px-6 py-3.5 border-b border-line flex items-center justify-between bg-white shrink-0">
@@ -39,17 +57,55 @@ export default function ChatHeader({ selectedUser, onBack }) {
                             {selectedUser.role || 'Member'}
                         </span>
                     </div>
-                    <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
-                        <span
-                            className={`w-1.5 h-1.5 rounded-full inline-block ${
-                                isOnline ? 'bg-success animate-pulse' : 'bg-slate-300'
-                            }`}
-                        />
-                        {isOnline ? 'Online' : 'Offline'}
-                    </p>
+                    {isPartnerTyping ? (
+                        <p className="text-xs text-teal-600 font-medium flex items-center gap-1.5 mt-0.5 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-ping" />
+                            typing...
+                        </p>
+                    ) : (
+                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
+                            <span
+                                className={`w-1.5 h-1.5 rounded-full inline-block ${
+                                    isOnline ? 'bg-success animate-pulse' : 'bg-slate-300'
+                                }`}
+                            />
+                            {isOnline ? 'Online' : formatLastSeen(selectedUser.lastSeen)}
+                        </p>
+                    )}
                 </div>
             </div>
-            <div className="flex items-center gap-1 text-muted">
+            <div className="flex items-center gap-1.5 text-muted">
+                {isSearchOpen && (
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-line rounded-lg px-2 py-1 text-xs">
+                        <Search size={14} className="text-muted" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange?.(e.target.value)}
+                            placeholder="Search in chat..."
+                            className="bg-transparent text-ink placeholder:text-muted outline-none w-28 md:w-36 text-xs"
+                            autoFocus
+                        />
+                        <button
+                            type="button"
+                            onClick={onToggleSearch}
+                            className="text-muted hover:text-ink cursor-pointer"
+                            title="Close search"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+                <button
+                    type="button"
+                    onClick={onToggleSearch}
+                    className={`p-2 rounded-lg hover:text-ink hover:bg-slate-100 transition-colors cursor-pointer ${
+                        isSearchOpen ? 'text-primary bg-slate-100' : ''
+                    }`}
+                    title="Search messages"
+                >
+                    <Search size={18} />
+                </button>
                 <button
                     type="button"
                     className="p-2 rounded-lg hover:text-ink hover:bg-slate-100 transition-colors cursor-pointer"

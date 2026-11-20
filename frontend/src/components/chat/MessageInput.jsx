@@ -3,7 +3,12 @@ import { SendHorizontal, Paperclip, Smile } from 'lucide-react';
 /**
  * Bottom message composer form with send button.
  */
-export default function MessageInput({ value, onChange, onSubmit, isSending }) {
+export default function MessageInput({ value, onChange, onSubmit, isSending, onTyping }) {
+    const handleChange = (e) => {
+        onChange(e);
+        onTyping?.();
+    };
+
     return (
         <form onSubmit={onSubmit} className="p-3 md:p-4 border-t border-line bg-white shrink-0">
             <div className="flex items-center gap-1.5 md:gap-2">
@@ -25,7 +30,7 @@ export default function MessageInput({ value, onChange, onSubmit, isSending }) {
                     type="text"
                     placeholder="Type a message..."
                     value={value}
-                    onChange={onChange}
+                    onChange={handleChange}
                     className="flex-1 bg-slate-50 border border-line text-ink placeholder:text-subtle rounded-xl px-4 py-2.5 md:py-3 text-xs md:text-sm outline-none transition-all focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <button

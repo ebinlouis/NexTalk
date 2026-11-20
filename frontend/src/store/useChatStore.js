@@ -8,6 +8,7 @@ export const useChatStore = create((set) => ({
     messages: [],
     isLoadingMessages: false,
     isSendingMessage: false,
+    isPartnerTyping: false,
     users: [],
     isLoadingUsers: false,
 
@@ -140,6 +141,38 @@ export const useChatStore = create((set) => ({
                 }));
             }
         });
+
+        socket.off('partnerTyping');
+        socket.on('partnerTyping', ({ senderId }) => {
+            if (senderId === selectedUserId) set({ isPartnerTyping: true });
+        });
+
+        socket.off('partnerStoppedTyping');
+        socket.on('partnerStoppedTyping', ({ senderId }) => {
+            if (senderId === selectedUserId) set({ isPartnerTyping: false });
+        });
+
+        socket.off('userLastSeen');
+        socket.on('userLastSeen', ({ userId, lastSeen }) => {
+            set((state) => ({
+                users: state.users.map((u) => (u._id === userId ? { ...u, lastSeen } : u)),
+                contacts: state.contacts.map((c) => (c._id === userId ? { ...c, lastSeen } : c)),
+            }));
+        });
+
+        socket.off('messageEdited');
+        socket.on('messageEdited', (updated) => {
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === updated._id ? updated : m)),
+            }));
+        });
+
+        socket.off('messageDeleted');
+        socket.on('messageDeleted', ({ messageId, message }) => {
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === messageId ? message : m)),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
@@ -147,5 +180,53 @@ export const useChatStore = create((set) => ({
         socket?.off('newMessage');
         socket?.off('messagesDelivered');
         socket?.off('messagesSeen');
+        socket?.off('partnerTyping');
+        socket?.off('partnerStoppedTyping');
+        socket?.off('userLastSeen');
+        socket?.off('messageEdited');
+        socket?.off('messageDeleted');
+        set({ isPartnerTyping: false });
+    },
+
+    sendTyping: (receiverId) => {
+        const socket = useAuthStore.getState().socket;
+        const authUser = useAuthStore.getState().authUser;
+        socket?.emit('typing', { receiverId, senderId: authUser?._id || authUser?.id });
+    },
+
+    sendStopTyping: (receiverId) => {
+        const socket = useAuthStore.getState().socket;
+        const authUser = useAuthStore.getState().authUser;
+        socket?.emit('stopTyping', { receiverId, senderId: authUser?._id || authUser?.id });
+    },
+
+    editMessage: async (messageId, text) => {
+        try {
+            const res = await api.put(`/api/messages/${messageId}`, { text });
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === messageId ? res.data.data : m)),
+            }));
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Failed to edit message' };
+        }
+    },
+
+    deleteMessage: async (messageId, deleteType = 'forEveryone') => {
+        try {
+            const res = await api.delete(`/api/messages/${messageId}`, { data: { deleteType } });
+            if (deleteType === 'forMe') {
+                set((state) => ({
+                    messages: state.messages.filter((m) => m._id !== messageId),
+                }));
+            } else {
+                set((state) => ({
+                    messages: state.messages.map((m) => (m._id === messageId ? res.data.data : m)),
+                }));
+            }
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Failed to delete message' };
+        }
     },
 }));

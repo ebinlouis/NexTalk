@@ -56,6 +56,7 @@ export const getChattedUsersService = async (currentUserId) => {
                 fullName: '$partner.fullName',
                 email: '$partner.email',
                 profilePic: '$partner.profilePic',
+                lastSeen: '$partner.lastSeen',
                 lastMessage: {
                     text: '$lastMessage.text',
                     senderId: '$lastMessage.senderId',
@@ -81,7 +82,46 @@ export const getMessagesService = async (currentUserId, partnerId) => {
             { senderId: currentUserId, receiverId: partnerId },
             { senderId: partnerId, receiverId: currentUserId },
         ],
+        deletedBy: { $ne: currentUserId },
     }).sort({ createdAt: 1 });
 
     return messages;
+};
+
+export const editMessageService = async (messageId, userId, newText) => {
+    if (!newText?.trim()) throw new CustomError('Message text cannot be empty', 400);
+    const message = await Message.findById(messageId);
+    if (!message) throw new CustomError('Message not found', 404);
+    if (message.senderId.toString() !== userId.toString()) {
+        throw new CustomError('Unauthorized to edit this message', 403);
+    }
+    const editWindow = 15 * 60 * 1000;
+    if (Date.now() - new Date(message.createdAt).getTime() > editWindow) {
+        throw new CustomError('Editing window (15 minutes) has expired', 400);
+    }
+    message.text = newText.trim();
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+    return message;
+};
+
+export const deleteMessageService = async (messageId, userId, deleteType = 'forEveryone') => {
+    const message = await Message.findById(messageId);
+    if (!message) throw new CustomError('Message not found', 404);
+    if (deleteType === 'forEveryone') {
+        if (message.senderId.toString() !== userId.toString()) {
+            throw new CustomError('Unauthorized to delete for everyone', 403);
+        }
+        message.isDeletedForEveryone = true;
+        message.text = 'This message was deleted';
+        message.image = null;
+        await message.save();
+        return { message, deleteType: 'forEveryone' };
+    }
+    if (!message.deletedBy.includes(userId)) {
+        message.deletedBy.push(userId);
+        await message.save();
+    }
+    return { message, deleteType: 'forMe' };
 };

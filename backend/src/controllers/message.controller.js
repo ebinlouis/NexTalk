@@ -5,6 +5,8 @@ import {
     sendMessageService,
     getChattedUsersService,
     getMessagesService,
+    editMessageService,
+    deleteMessageService,
 } from '../services/message.service.js';
 import { getReceiverSocketId, io } from '../lib/socket.js';
 
@@ -91,5 +93,39 @@ export const getMessages = async (req, res) => {
     } catch (error) {
         console.error('Error in getMessages:', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const editMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { text } = req.body;
+        const userId = req.user._id;
+        const updatedMessage = await editMessageService(id, userId, text);
+
+        const receiverSocketId = getReceiverSocketId(updatedMessage.receiverId.toString());
+        if (receiverSocketId) io.to(receiverSocketId).emit('messageEdited', updatedMessage);
+
+        res.status(200).json({ success: true, data: updatedMessage });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ message: error.message || 'Internal Server Error' });
+    }
+};
+
+export const deleteMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { deleteType } = req.body;
+        const userId = req.user._id;
+        const result = await deleteMessageService(id, userId, deleteType);
+
+        if (result.deleteType === 'forEveryone') {
+            const receiverSocket = getReceiverSocketId(result.message.receiverId.toString());
+            if (receiverSocket) io.to(receiverSocket).emit('messageDeleted', { messageId: id, message: result.message });
+        }
+
+        res.status(200).json({ success: true, data: result.message, deleteType: result.deleteType });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ message: error.message || 'Internal Server Error' });
     }
 };

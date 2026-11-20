@@ -164,7 +164,9 @@ describe('Authentication Module Tests', () => {
                 email: 'alice@example.com',
                 password: 'securepassword',
             });
-            const refreshCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('refreshToken='));
+            const refreshCookie = loginRes.headers['set-cookie']?.find((c) =>
+                c.startsWith('refreshToken='),
+            );
 
             const res = await request(app).post('/api/auth/refresh').set('Cookie', [refreshCookie]);
             expect(res.statusCode).toBe(200);
@@ -182,10 +184,14 @@ describe('Authentication Module Tests', () => {
                 email: 'alice@example.com',
                 password: 'securepassword',
             });
-            const oldCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('refreshToken='));
+            const oldCookie = loginRes.headers['set-cookie']?.find((c) =>
+                c.startsWith('refreshToken='),
+            );
 
             await request(app).post('/api/auth/refresh').set('Cookie', [oldCookie]);
-            const replayRes = await request(app).post('/api/auth/refresh').set('Cookie', [oldCookie]);
+            const replayRes = await request(app)
+                .post('/api/auth/refresh')
+                .set('Cookie', [oldCookie]);
             expect(replayRes.statusCode).toBe(401);
         });
     });
@@ -201,7 +207,9 @@ describe('Authentication Module Tests', () => {
                 email: 'alice@example.com',
                 password: 'securepassword',
             });
-            const accessCookie = loginRes.headers['set-cookie']?.find((c) => c.startsWith('accessToken='));
+            const accessCookie = loginRes.headers['set-cookie']?.find((c) =>
+                c.startsWith('accessToken='),
+            );
 
             const res = await request(app).get('/api/auth/check').set('Cookie', [accessCookie]);
             expect(res.statusCode).toBe(200);

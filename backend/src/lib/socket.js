@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import Message from '../models/message.model.js';
+import User from '../models/user.model.js';
 
 const userSocketMap = {}; // { [userId]: socketId }
 
@@ -42,8 +43,27 @@ export const initSocket = (server) => {
             }
         });
 
-        socket.on('disconnect', () => {
-            if (userId) delete userSocketMap[userId];
+        socket.on('typing', ({ receiverId, senderId }) => {
+            const receiverSocket = getReceiverSocketId(receiverId);
+            if (receiverSocket) io.to(receiverSocket).emit('partnerTyping', { senderId });
+        });
+
+        socket.on('stopTyping', ({ receiverId, senderId }) => {
+            const receiverSocket = getReceiverSocketId(receiverId);
+            if (receiverSocket) io.to(receiverSocket).emit('partnerStoppedTyping', { senderId });
+        });
+
+        socket.on('disconnect', async () => {
+            if (userId) {
+                delete userSocketMap[userId];
+                const lastSeen = new Date();
+                try {
+                    await User.findByIdAndUpdate(userId, { lastSeen });
+                } catch (err) {
+                    console.error('Error updating lastSeen on disconnect:', err.message);
+                }
+                io.emit('userLastSeen', { userId, lastSeen });
+            }
             io.emit('getOnlineUsers', Object.keys(userSocketMap));
         });
     });
