@@ -30,6 +30,16 @@ const userSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        bio: {
+            type: String,
+            default: 'Hey there! I am using NexTalk.',
+            maxLength: 150,
+        },
+        status: {
+            type: String,
+            enum: ['available', 'busy', 'away'],
+            default: 'available',
+        },
     },
     {
         timestamps: true,

@@ -9,6 +9,7 @@ import {
     deleteMessageService,
 } from '../services/message.service.js';
 import { getReceiverSocketId, io } from '../lib/socket.js';
+import { uploadMediaService } from '../services/storage.service.js';
 
 export const getContacts = async (req, res) => {
     try {
@@ -26,13 +27,18 @@ export const getContacts = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image } = req.body;
+        const { text, image, fileUrl, fileName, fileType, fileSize } = req.body;
         const receiverId = req.params.id;
         const senderId = req.user._id;
 
         const receiverSocketId = getReceiverSocketId(receiverId);
         const isDelivered = !!receiverSocketId;
-        const newMessage = await sendMessageService(senderId, receiverId, text, image, isDelivered);
+        const newMessage = await sendMessageService(
+            senderId,
+            receiverId,
+            { text, image, fileUrl, fileName, fileType, fileSize },
+            isDelivered
+        );
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit('newMessage', newMessage);
@@ -128,5 +134,31 @@ export const deleteMessage = async (req, res) => {
         res.status(200).json({ success: true, data: result.message, deleteType: result.deleteType });
     } catch (error) {
         res.status(error.statusCode || 500).json({ message: error.message || 'Internal Server Error' });
+    }
+};
+
+export const uploadAttachment = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        const isImage = req.file.mimetype.startsWith('image/');
+        const result = await uploadMediaService(req.file.buffer, {
+            folder: isImage ? 'nextalk_chat_images' : 'nextalk_chat_docs',
+            resource_type: isImage ? 'image' : 'raw',
+        });
+        res.status(200).json({
+            success: true,
+            data: {
+                url: result.url,
+                fileName: req.file.originalname,
+                fileType: req.file.mimetype,
+                fileSize: req.file.size,
+            },
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
+        });
     }
 };

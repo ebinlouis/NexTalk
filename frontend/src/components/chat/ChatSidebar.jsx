@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LogOut, Search } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
 import { useAuthStore } from '../../store/useAuthStore';
+import ProfileModal from '../profile/ProfileModal';
 
 const renderAvatar = (user, textClass = 'text-xs') =>
     user?.profilePic ? (
@@ -31,6 +32,7 @@ export default function ChatSidebar({
     const { onlineUsers } = useAuthStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     const filteredUsers = users.filter((u) => {
         const matches = u.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,7 +58,12 @@ export default function ChatSidebar({
         >
             {/* Profile Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => setIsProfileOpen(true)}
+                    className="flex items-center gap-3 text-left hover:opacity-85 transition-opacity cursor-pointer group"
+                    title="Click to edit profile"
+                >
                     <div className="relative w-10 h-10 shrink-0">
                         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line overflow-hidden">
                             {renderAvatar(currentUser, 'text-sm')}
@@ -64,15 +71,21 @@ export default function ChatSidebar({
                         <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                     </div>
                     <div className="text-left">
-                        <h4 className="text-sm font-semibold tracking-tight text-ink">
+                        <h4 className="text-sm font-semibold tracking-tight text-ink group-hover:text-primary transition-colors">
                             {currentUser.fullName}
                         </h4>
-                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-                            Online
+                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5 capitalize">
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${
+                                currentUser.status === 'busy'
+                                    ? 'bg-rose-500'
+                                    : currentUser.status === 'away'
+                                    ? 'bg-amber-500'
+                                    : 'bg-emerald-500'
+                            }`} />
+                            {currentUser.status || 'Available'}
                         </p>
                     </div>
-                </div>
+                </button>
                 <button
                     type="button"
                     onClick={onLogout}
@@ -235,6 +248,8 @@ export default function ChatSidebar({
                           </button>
                       ))}
             </div>
+
+            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         </div>
     );
 }

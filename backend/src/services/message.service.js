@@ -10,16 +10,23 @@ export const getAllContactsService = async (currentUserId) => {
     return users;
 };
 
-export const sendMessageService = async (senderId, receiverId, text, image, isDelivered = false) => {
-    if (!text && !image) {
-        throw new CustomError('Message content (text or image) is required', 400);
+export const sendMessageService = async (senderId, receiverId, messageData, isDelivered = false) => {
+    const data = typeof messageData === 'object' && messageData !== null ? messageData : { text: messageData };
+    const { text, image, fileUrl, fileName, fileType, fileSize } = data;
+
+    if (!text && !image && !fileUrl) {
+        throw new CustomError('Message content (text, image, or file) is required', 400);
     }
 
     const newMessage = await Message.create({
         senderId,
         receiverId,
-        text,
-        image,
+        text: text || '',
+        image: image || null,
+        fileUrl: fileUrl || null,
+        fileName: fileName || null,
+        fileType: fileType || null,
+        fileSize: fileSize || null,
         delivered: isDelivered,
         deliveredAt: isDelivered ? new Date() : null,
     });

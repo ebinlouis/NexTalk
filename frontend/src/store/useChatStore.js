@@ -150,6 +150,20 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    uploadAttachment: async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const res = await api.post('/api/messages/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return { success: true, data: res.data.data };
+        } catch (error) {
+            const message = error.response?.data?.message || 'Failed to upload attachment';
+            return { success: false, error: message };
+        }
+    },
+
     subscribeToMessages: (selectedUserId) => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;

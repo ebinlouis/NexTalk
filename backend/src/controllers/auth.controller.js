@@ -1,5 +1,6 @@
-import { loginService, logoutService, signupService, refreshTokenService, saveRefreshTokenService } from '../services/auth.service.js';
+import { loginService, logoutService, signupService, refreshTokenService, saveRefreshTokenService, updateProfileService } from '../services/auth.service.js';
 import { generateAndSetTokens, verifyRefreshToken } from '../utils/jwt.js';
+import { uploadMediaService } from '../services/storage.service.js';
 
 export const signup = async (req, res) => {
     try {
@@ -53,12 +54,12 @@ export const logout = async (req, res) => {
 
 export const checkAuth = async (req, res) => {
     try {
-        const { _id, fullName, email, profilePic } = req.user;
+        const { _id, fullName, email, profilePic, bio, status } = req.user;
 
         return res.status(200).json({
             success: true,
             message: 'User authenticated successfully',
-            data: { id: _id, fullName, email, profilePic },
+            data: { id: _id, fullName, email, profilePic, bio, status },
         });
     } catch (error) {
         res.status(500).json({
@@ -80,6 +81,48 @@ export const refreshToken = async (req, res) => {
             success: true,
             message: 'Token refreshed successfully',
             data: result,
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
+        });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { fullName, bio, status } = req.body;
+        const updatedUser = await updateProfileService(userId, { fullName, bio, status });
+        res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: updatedUser,
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
+        });
+    }
+};
+
+export const updateAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file uploaded' });
+        }
+        const result = await uploadMediaService(req.file.buffer, {
+            folder: 'nextalk_avatars',
+            width: 250,
+            height: 250,
+            crop: 'fill',
+            gravity: 'face',
+        });
+        const updatedUser = await updateProfileService(req.user._id, { profilePic: result.url });
+        res.status(200).json({
+            success: true,
+            message: 'Avatar updated successfully',
+            data: updatedUser,
         });
     } catch (error) {
         res.status(error.statusCode || 500).json({

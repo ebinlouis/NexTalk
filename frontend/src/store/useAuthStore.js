@@ -10,6 +10,7 @@ export const useAuthStore = create((set, get) => ({
     isSigningUp: false,
     isLoggingIn: false,
     isCheckingAuth: true,
+    isUpdatingProfile: false,
     socket: null,
     onlineUsers: [],
 
@@ -67,6 +68,42 @@ export const useAuthStore = create((set, get) => ({
         } catch {
             toast.error('Failed to logout');
             return { success: false };
+        }
+    },
+
+    updateProfile: async (data) => {
+        set({ isUpdatingProfile: true });
+        try {
+            const res = await api.put('/api/auth/profile', data);
+            set({ authUser: res.data.data });
+            toast.success('Profile updated successfully!');
+            return { success: true };
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Failed to update profile';
+            toast.error(errorMessage);
+            return { success: false, error: errorMessage };
+        } finally {
+            set({ isUpdatingProfile: false });
+        }
+    },
+
+    updateAvatar: async (file) => {
+        set({ isUpdatingProfile: true });
+        const formData = new FormData();
+        formData.append('avatar', file);
+        try {
+            const res = await api.put('/api/auth/profile/avatar', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            set({ authUser: res.data.data });
+            toast.success('Avatar updated successfully!');
+            return { success: true };
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Failed to update avatar';
+            toast.error(errorMessage);
+            return { success: false, error: errorMessage };
+        } finally {
+            set({ isUpdatingProfile: false });
         }
     },
 

@@ -22,6 +22,7 @@ export default function ChatPage() {
         getMessages,
         sendMessage,
         isSendingMessage,
+        uploadAttachment,
         subscribeToMessages,
         unsubscribeFromMessages,
         sendTyping,
@@ -79,16 +80,35 @@ export default function ChatPage() {
     };
 
     // Handle message sending
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
+    const handleSendMessage = async (e, attachedFile) => {
+        e?.preventDefault?.();
         const trimmed = inputMessage.trim();
-        if (!trimmed || !selectedUser || isSendingMessage) return;
+        if ((!trimmed && !attachedFile) || !selectedUser || isSendingMessage) return;
 
         clearTimeout(typingTimeoutRef.current);
         sendStopTyping(selectedUser._id);
 
+        let attachmentData = {};
+        if (attachedFile) {
+            const uploadRes = await uploadAttachment(attachedFile);
+            if (uploadRes?.success) {
+                const isImage = attachedFile.type.startsWith('image/');
+                attachmentData = isImage
+                    ? { image: uploadRes.data.url }
+                    : {
+                          fileUrl: uploadRes.data.url,
+                          fileName: uploadRes.data.fileName || attachedFile.name,
+                          fileType: uploadRes.data.fileType || attachedFile.type,
+                          fileSize: uploadRes.data.fileSize || attachedFile.size,
+                      };
+            } else {
+                toast.error(uploadRes?.error || 'Failed to upload attachment');
+                return;
+            }
+        }
+
         const isExistingChat = users.some((u) => u._id === selectedUser._id);
-        const res = await sendMessage(selectedUser._id, { text: trimmed });
+        const res = await sendMessage(selectedUser._id, { text: trimmed, ...attachmentData });
         if (res?.success) {
             setInputMessage('');
             if (!isExistingChat) getUsers();

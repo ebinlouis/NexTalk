@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, CheckCheck, Pencil, Trash2, Ban, Check as CheckIcon, X as CancelIcon, Clock, RotateCw } from 'lucide-react';
+import { Check, CheckCheck, Pencil, Trash2, Ban, Check as CheckIcon, X as CancelIcon, Clock, RotateCw, FileText, Download } from 'lucide-react';
 import MessageInfoModal from './MessageInfoModal';
+import ImageLightboxModal from './ImageLightboxModal';
 import { useChatStore } from '../../store/useChatStore';
 
 const renderHighlightedText = (text, query) => {
@@ -29,6 +30,7 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editText, setEditText] = useState('');
     const [mountTime] = useState(() => Date.now());
+    const [lightboxImage, setLightboxImage] = useState(null);
     const { editMessage, deleteMessage, retrySendMessage, hasMoreMessages, isLoadingMore, loadOlderMessages } = useChatStore();
 
     const handleSaveEdit = async (msgId) => {
@@ -141,10 +143,49 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                     </div>
                                 ) : (
                                     <>
+                                        {msg.image && (
+                                            <div className="mb-2 rounded-xl overflow-hidden border border-line/40">
+                                                <img
+                                                    src={msg.image}
+                                                    alt="Shared media"
+                                                    onClick={() => setLightboxImage(msg.image)}
+                                                    className="max-w-[260px] md:max-w-[320px] max-h-[280px] w-full object-cover rounded-xl hover:opacity-95 transition-opacity cursor-pointer"
+                                                />
+                                            </div>
+                                        )}
+                                        {msg.fileUrl && (
+                                            <a
+                                                href={msg.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                download={msg.fileName || 'download'}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex items-center gap-3 p-2.5 mb-2 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-colors group/file text-left max-w-[280px]"
+                                            >
+                                                <div className="w-9 h-9 rounded-lg bg-teal-50 text-primary flex items-center justify-center shrink-0">
+                                                    <FileText size={18} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-semibold text-ink truncate group-hover/file:text-primary transition-colors">
+                                                        {msg.fileName || 'Document'}
+                                                    </p>
+                                                    {msg.fileSize && (
+                                                        <p className="text-[10px] text-muted">
+                                                            {(msg.fileSize / (1024 * 1024)).toFixed(1)} MB
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-white transition-colors shrink-0">
+                                                    <Download size={14} />
+                                                </div>
+                                            </a>
+                                        )}
                                         <div className="flex items-start justify-between gap-2">
-                                            <p onClick={() => setSelectedMessageInfo(msg)} className="text-slate-800 cursor-pointer flex-1">
-                                                {renderHighlightedText(msg.text, searchQuery)}
-                                            </p>
+                                            {msg.text && (
+                                                <p onClick={() => setSelectedMessageInfo(msg)} className="text-slate-800 cursor-pointer flex-1">
+                                                    {renderHighlightedText(msg.text, searchQuery)}
+                                                </p>
+                                            )}
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                                 {isMe && mountTime - new Date(msg.createdAt).getTime() < 15 * 60 * 1000 && (
                                                     <button
@@ -220,6 +261,13 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                 <MessageInfoModal
                     message={selectedMessageInfo}
                     onClose={() => setSelectedMessageInfo(null)}
+                />
+            )}
+
+            {lightboxImage && (
+                <ImageLightboxModal
+                    imageUrl={lightboxImage}
+                    onClose={() => setLightboxImage(null)}
                 />
             )}
         </div>
