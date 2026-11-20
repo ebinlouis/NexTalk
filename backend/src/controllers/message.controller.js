@@ -84,7 +84,8 @@ export const getMessages = async (req, res) => {
             });
         }
 
-        const messages = await getMessagesService(currentUserId, partnerId);
+        const { before, limit } = req.query;
+        const messages = await getMessagesService(currentUserId, partnerId, { before, limit });
 
         res.status(200).json({
             success: true,

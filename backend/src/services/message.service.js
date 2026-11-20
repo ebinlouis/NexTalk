@@ -71,21 +71,28 @@ export const getChattedUsersService = async (currentUserId) => {
     return conversations;
 };
 
-export const getMessagesService = async (currentUserId, partnerId) => {
+export const getMessagesService = async (currentUserId, partnerId, { before, limit = 25 } = {}) => {
     await Message.updateMany(
         { senderId: partnerId, receiverId: currentUserId, seen: false },
         { $set: { seen: true, seenAt: new Date() } }
     );
 
-    const messages = await Message.find({
+    const query = {
         $or: [
             { senderId: currentUserId, receiverId: partnerId },
             { senderId: partnerId, receiverId: currentUserId },
         ],
         deletedBy: { $ne: currentUserId },
-    }).sort({ createdAt: 1 });
+    };
+    if (before) {
+        query.createdAt = { $lt: new Date(before) };
+    }
 
-    return messages;
+    const messages = await Message.find(query)
+        .sort({ createdAt: -1 })
+        .limit(Math.min(Number(limit) || 25, 50));
+
+    return messages.reverse();
 };
 
 export const editMessageService = async (messageId, userId, newText) => {

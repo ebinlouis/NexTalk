@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, CheckCheck, Pencil, Trash2, Ban, Check as CheckIcon, X as CancelIcon } from 'lucide-react';
+import { Check, CheckCheck, Pencil, Trash2, Ban, Check as CheckIcon, X as CancelIcon, Clock, RotateCw } from 'lucide-react';
 import MessageInfoModal from './MessageInfoModal';
 import { useChatStore } from '../../store/useChatStore';
 
@@ -23,11 +23,13 @@ const renderHighlightedText = (text, query) => {
  */
 export default function MessageList({ messages, isLoading, currentUserId, partnerName, searchQuery = '' }) {
     const messagesEndRef = useRef(null);
+    const containerRef = useRef(null);
+    const lastMsgIdRef = useRef(null);
     const [selectedMessageInfo, setSelectedMessageInfo] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editText, setEditText] = useState('');
     const [mountTime] = useState(() => Date.now());
-    const { editMessage, deleteMessage } = useChatStore();
+    const { editMessage, deleteMessage, retrySendMessage, hasMoreMessages, isLoadingMore, loadOlderMessages } = useChatStore();
 
     const handleSaveEdit = async (msgId) => {
         if (!editText.trim()) return;
@@ -35,12 +37,35 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
         setEditingMessageId(null);
     };
 
+    const handleScroll = async (e) => {
+        if (e.currentTarget.scrollTop === 0 && hasMoreMessages && !isLoadingMore && messages.length > 0) {
+            const partnerId = messages[0].senderId === currentUserId ? messages[0].receiverId : messages[0].senderId;
+            if (!partnerId) return;
+            const prevHeight = e.currentTarget.scrollHeight;
+            await loadOlderMessages(partnerId);
+            requestAnimationFrame(() => {
+                if (containerRef.current) {
+                    containerRef.current.scrollTop = containerRef.current.scrollHeight - prevHeight;
+                }
+            });
+        }
+    };
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const latestMsg = messages[messages.length - 1];
+        if (latestMsg && latestMsg._id !== lastMsgIdRef.current) {
+            lastMsgIdRef.current = latestMsg._id;
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [messages]);
 
     return (
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-4 bg-canvas custom-scrollbar flex flex-col">
+        <div ref={containerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-4 bg-canvas custom-scrollbar flex flex-col">
+            {isLoadingMore && (
+                <div className="flex items-center justify-center py-1">
+                    <span className="text-xs text-muted animate-pulse font-medium">Loading older messages...</span>
+                </div>
+            )}
             <div className="flex items-center justify-center my-2">
                 <div className="bg-white border border-slate-200/80 text-muted text-xs px-3.5 py-1 rounded-full shadow-xs font-medium">
                     Today, End-to-End Encrypted
@@ -158,7 +183,22 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                                 })}
                                             </span>
                                             {isMe && (
-                                                msg.seen ? (
+                                                msg.status === 'failed' ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            retrySendMessage(msg._id);
+                                                        }}
+                                                        className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-600 font-medium cursor-pointer"
+                                                        title="Failed to send. Click to retry."
+                                                    >
+                                                        <RotateCw size={11} />
+                                                        <span>Retry</span>
+                                                    </button>
+                                                ) : msg.status === 'sending' ? (
+                                                    <Clock size={12} className="text-slate-400 animate-pulse" title="Sending..." />
+                                                ) : msg.seen ? (
                                                     <CheckCheck size={14} className="text-emerald-500" title="Read" />
                                                 ) : msg.delivered ? (
                                                     <CheckCheck size={14} className="text-slate-400" title="Delivered" />

@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import api from '../lib/api';
 import { useAuthStore } from './useAuthStore';
 
-export const useChatStore = create((set) => ({
+export const useChatStore = create((set, get) => ({
     contacts: [],
     isLoadingContacts: false,
     messages: [],
     isLoadingMessages: false,
+    hasMoreMessages: false,
+    isLoadingMore: false,
     isSendingMessage: false,
     isPartnerTyping: false,
     users: [],
@@ -50,6 +52,7 @@ export const useChatStore = create((set) => ({
             }
             set((state) => ({
                 messages: res.data.data,
+                hasMoreMessages: res.data.data.length >= 25,
                 users: state.users.map((u) => (u._id === userId ? { ...u, unreadCount: 0 } : u)),
             }));
             return { success: true };
@@ -62,13 +65,46 @@ export const useChatStore = create((set) => ({
         }
     },
 
+    loadOlderMessages: async (userId) => {
+        const { messages, hasMoreMessages, isLoadingMore } = get();
+        if (!hasMoreMessages || isLoadingMore || messages.length === 0) return;
+        const oldestCreatedAt = messages[0]?.createdAt;
+        if (!oldestCreatedAt) return;
+        set({ isLoadingMore: true });
+        try {
+            const res = await api.get(`/api/messages/${userId}?before=${oldestCreatedAt}&limit=25`);
+            const older = res.data.data || [];
+            set((state) => ({
+                messages: [...older, ...state.messages],
+                hasMoreMessages: older.length >= 25,
+            }));
+        } catch (error) {
+            console.error('Failed to load older messages:', error.message);
+        } finally {
+            set({ isLoadingMore: false });
+        }
+    },
+
     sendMessage: async (userId, messageData) => {
         set({ isSendingMessage: true });
+        const authUser = useAuthStore.getState().authUser;
+        const tempId = `temp-${Date.now()}`;
+        const tempMsg = {
+            _id: tempId,
+            senderId: authUser?._id || authUser?.id,
+            receiverId: userId,
+            text: messageData.text || '',
+            image: messageData.image || null,
+            status: 'sending',
+            createdAt: new Date().toISOString(),
+            tempData: messageData,
+        };
+        set((state) => ({ messages: [...state.messages, tempMsg] }));
         try {
             const res = await api.post(`/api/messages/send/${userId}`, messageData);
             const sentMsg = res.data.data;
             set((state) => ({
-                messages: [...state.messages, sentMsg],
+                messages: state.messages.map((m) => (m._id === tempId ? sentMsg : m)),
                 users: state.users.map((u) =>
                     u._id === userId
                         ? {
@@ -84,11 +120,33 @@ export const useChatStore = create((set) => ({
             }));
             return { success: true };
         } catch (error) {
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === tempId ? { ...m, status: 'failed' } : m)),
+            }));
             const message = error.response?.data?.message || 'Failed to send message';
             console.error('Failed to send message:', message);
             return { success: false, error: message };
         } finally {
             set({ isSendingMessage: false });
+        }
+    },
+
+    retrySendMessage: async (tempId) => {
+        const msg = get().messages.find((m) => m._id === tempId);
+        if (!msg || !msg.tempData) return;
+        set((state) => ({
+            messages: state.messages.map((m) => (m._id === tempId ? { ...m, status: 'sending' } : m)),
+        }));
+        try {
+            const res = await api.post(`/api/messages/send/${msg.receiverId}`, msg.tempData);
+            const sentMsg = res.data.data;
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === tempId ? sentMsg : m)),
+            }));
+        } catch {
+            set((state) => ({
+                messages: state.messages.map((m) => (m._id === tempId ? { ...m, status: 'failed' } : m)),
+            }));
         }
     },
 
