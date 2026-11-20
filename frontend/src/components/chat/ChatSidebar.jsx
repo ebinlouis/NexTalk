@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { LogOut, Search } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
 import { useAuthStore } from '../../store/useAuthStore';
+import ProfileModal from '../profile/ProfileModal';
 
 const renderAvatar = (user, textClass = 'text-xs') =>
     user?.profilePic ? (
@@ -28,9 +30,24 @@ export default function ChatSidebar({
     onLogout,
 }) {
     const { onlineUsers } = useAuthStore();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All');
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+    const filteredUsers = users.filter((u) => {
+        const matches = u.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!matches) return false;
+        if (activeFilter === 'Unread') return (u.unreadCount || 0) > 0;
+        return true;
+    });
+
+    const filteredContacts = contacts.filter((c) =>
+        c.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const tabs = [
-        { id: 'chats', label: 'Chats', count: users.length },
-        { id: 'contacts', label: 'Contacts', count: contacts.length },
+        { id: 'chats', label: 'Chats', count: filteredUsers.length },
+        { id: 'contacts', label: 'Contacts', count: filteredContacts.length },
     ];
 
     return (
@@ -41,7 +58,12 @@ export default function ChatSidebar({
         >
             {/* Profile Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => setIsProfileOpen(true)}
+                    className="flex items-center gap-3 text-left hover:opacity-85 transition-opacity cursor-pointer group"
+                    title="Click to edit profile"
+                >
                     <div className="relative w-10 h-10 shrink-0">
                         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold border border-line overflow-hidden">
                             {renderAvatar(currentUser, 'text-sm')}
@@ -49,15 +71,21 @@ export default function ChatSidebar({
                         <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
                     </div>
                     <div className="text-left">
-                        <h4 className="text-sm font-semibold tracking-tight text-ink">
+                        <h4 className="text-sm font-semibold tracking-tight text-ink group-hover:text-primary transition-colors">
                             {currentUser.fullName}
                         </h4>
-                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-                            Online
+                        <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5 capitalize">
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${
+                                currentUser.status === 'busy'
+                                    ? 'bg-rose-500'
+                                    : currentUser.status === 'away'
+                                    ? 'bg-amber-500'
+                                    : 'bg-emerald-500'
+                            }`} />
+                            {currentUser.status || 'Available'}
                         </p>
                     </div>
-                </div>
+                </button>
                 <button
                     type="button"
                     onClick={onLogout}
@@ -74,6 +102,8 @@ export default function ChatSidebar({
                     <Search size={15} className="absolute left-3 text-muted pointer-events-none" />
                     <input
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search chats or people..."
                         className="w-full bg-slate-50 border border-slate-200/80 rounded-xl pl-8 pr-3 py-2 text-xs text-ink placeholder:text-muted focus:outline-none focus:border-primary transition-all"
                     />
@@ -117,8 +147,9 @@ export default function ChatSidebar({
                     <button
                         key={item}
                         type="button"
+                        onClick={() => setActiveFilter(item)}
                         className={`px-3 py-1 rounded-full text-xs transition-colors cursor-pointer ${
-                            item === 'All'
+                            activeFilter === item
                                 ? 'bg-ink text-white font-medium'
                                 : 'text-muted hover:text-ink bg-slate-100/70 hover:bg-slate-100'
                         }`}
@@ -131,7 +162,7 @@ export default function ChatSidebar({
             {/* Users/Contacts List */}
             <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 bg-white custom-scrollbar">
                 {activeTab === 'chats'
-                    ? users.map((chat) => {
+                    ? filteredUsers.map((chat) => {
                           const isLastFromMe =
                               chat.lastMessage?.senderId?.toString() ===
                               (currentUser?._id || currentUser?.id)?.toString();
@@ -189,7 +220,7 @@ export default function ChatSidebar({
                               </button>
                           );
                       })
-                    : contacts.map((contact) => (
+                    : filteredContacts.map((contact) => (
                           <button
                               key={contact._id}
                               onClick={() => onSelectContact(contact)}
@@ -217,6 +248,8 @@ export default function ChatSidebar({
                           </button>
                       ))}
             </div>
+
+            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         </div>
     );
 }

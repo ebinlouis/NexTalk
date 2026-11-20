@@ -5,8 +5,11 @@ import {
     sendMessageService,
     getChattedUsersService,
     getMessagesService,
+    editMessageService,
+    deleteMessageService,
 } from '../services/message.service.js';
 import { getReceiverSocketId, io } from '../lib/socket.js';
+import { uploadMediaService } from '../services/storage.service.js';
 
 export const getContacts = async (req, res) => {
     try {
@@ -24,13 +27,18 @@ export const getContacts = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image } = req.body;
+        const { text, image, fileUrl, fileName, fileType, fileSize } = req.body;
         const receiverId = req.params.id;
         const senderId = req.user._id;
 
         const receiverSocketId = getReceiverSocketId(receiverId);
         const isDelivered = !!receiverSocketId;
-        const newMessage = await sendMessageService(senderId, receiverId, text, image, isDelivered);
+        const newMessage = await sendMessageService(
+            senderId,
+            receiverId,
+            { text, image, fileUrl, fileName, fileType, fileSize },
+            isDelivered
+        );
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit('newMessage', newMessage);
@@ -82,7 +90,8 @@ export const getMessages = async (req, res) => {
             });
         }
 
-        const messages = await getMessagesService(currentUserId, partnerId);
+        const { before, limit } = req.query;
+        const messages = await getMessagesService(currentUserId, partnerId, { before, limit });
 
         res.status(200).json({
             success: true,
@@ -91,5 +100,65 @@ export const getMessages = async (req, res) => {
     } catch (error) {
         console.error('Error in getMessages:', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const editMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { text } = req.body;
+        const userId = req.user._id;
+        const updatedMessage = await editMessageService(id, userId, text);
+
+        const receiverSocketId = getReceiverSocketId(updatedMessage.receiverId.toString());
+        if (receiverSocketId) io.to(receiverSocketId).emit('messageEdited', updatedMessage);
+
+        res.status(200).json({ success: true, data: updatedMessage });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ message: error.message || 'Internal Server Error' });
+    }
+};
+
+export const deleteMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { deleteType } = req.body;
+        const userId = req.user._id;
+        const result = await deleteMessageService(id, userId, deleteType);
+
+        if (result.deleteType === 'forEveryone') {
+            const receiverSocket = getReceiverSocketId(result.message.receiverId.toString());
+            if (receiverSocket) io.to(receiverSocket).emit('messageDeleted', { messageId: id, message: result.message });
+        }
+
+        res.status(200).json({ success: true, data: result.message, deleteType: result.deleteType });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ message: error.message || 'Internal Server Error' });
+    }
+};
+
+export const uploadAttachment = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        const isImage = req.file.mimetype.startsWith('image/');
+        const result = await uploadMediaService(req.file.buffer, {
+            folder: isImage ? 'nextalk_chat_images' : 'nextalk_chat_docs',
+            resource_type: isImage ? 'image' : 'raw',
+        });
+        res.status(200).json({
+            success: true,
+            data: {
+                url: result.url,
+                fileName: req.file.originalname,
+                fileType: req.file.mimetype,
+                fileSize: req.file.size,
+            },
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
+        });
     }
 };

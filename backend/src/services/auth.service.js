@@ -109,3 +109,20 @@ export const refreshTokenService = async (refreshToken, newRefreshToken) => {
 
     return { id: user._id, fullName: user.fullName, email: user.email, profilePic: user.profilePic };
 };
+
+export const updateProfileService = async (userId, updateData) => {
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    );
+    if (!user) throw new CustomError('User not found', 404);
+    return {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePic: user.profilePic,
+        bio: user.bio,
+        status: user.status,
+    };
+};

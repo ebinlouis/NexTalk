@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
@@ -22,14 +22,20 @@ export default function ChatPage() {
         getMessages,
         sendMessage,
         isSendingMessage,
+        uploadAttachment,
         subscribeToMessages,
         unsubscribeFromMessages,
+        sendTyping,
+        sendStopTyping,
     } = useChatStore();
 
     // Navigation and state
     const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
     const [selectedUser, setSelectedUser] = useState(null);
     const [inputMessage, setInputMessage] = useState('');
+    const [inChatSearch, setInChatSearch] = useState('');
+    const [isChatSearchOpen, setIsChatSearchOpen] = useState(false);
+    const typingTimeoutRef = useRef(null);
 
     const currentUser = authUser || {
         fullName: 'Loading...',
@@ -64,14 +70,45 @@ export default function ChatPage() {
         setActiveTab('chats');
     };
 
+    const handleTyping = () => {
+        if (!selectedUser?._id) return;
+        sendTyping(selectedUser._id);
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            sendStopTyping(selectedUser._id);
+        }, 1500);
+    };
+
     // Handle message sending
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
+    const handleSendMessage = async (e, attachedFile) => {
+        e?.preventDefault?.();
         const trimmed = inputMessage.trim();
-        if (!trimmed || !selectedUser || isSendingMessage) return;
+        if ((!trimmed && !attachedFile) || !selectedUser || isSendingMessage) return;
+
+        clearTimeout(typingTimeoutRef.current);
+        sendStopTyping(selectedUser._id);
+
+        let attachmentData = {};
+        if (attachedFile) {
+            const uploadRes = await uploadAttachment(attachedFile);
+            if (uploadRes?.success) {
+                const isImage = attachedFile.type.startsWith('image/');
+                attachmentData = isImage
+                    ? { image: uploadRes.data.url }
+                    : {
+                          fileUrl: uploadRes.data.url,
+                          fileName: uploadRes.data.fileName || attachedFile.name,
+                          fileType: uploadRes.data.fileType || attachedFile.type,
+                          fileSize: uploadRes.data.fileSize || attachedFile.size,
+                      };
+            } else {
+                toast.error(uploadRes?.error || 'Failed to upload attachment');
+                return;
+            }
+        }
 
         const isExistingChat = users.some((u) => u._id === selectedUser._id);
-        const res = await sendMessage(selectedUser._id, { text: trimmed });
+        const res = await sendMessage(selectedUser._id, { text: trimmed, ...attachmentData });
         if (res?.success) {
             setInputMessage('');
             if (!isExistingChat) getUsers();
@@ -103,18 +140,24 @@ export default function ChatPage() {
                             <ChatHeader
                                 selectedUser={selectedUser}
                                 onBack={() => setSelectedUser(null)}
+                                searchQuery={inChatSearch}
+                                onSearchChange={setInChatSearch}
+                                isSearchOpen={isChatSearchOpen}
+                                onToggleSearch={() => setIsChatSearchOpen((prev) => !prev)}
                             />
                             <MessageList
                                 messages={messages}
                                 isLoading={isLoadingMessages}
                                 currentUserId={authUser?._id || authUser?.id}
                                 partnerName={selectedUser?.fullName}
+                                searchQuery={inChatSearch}
                             />
                             <MessageInput
                                 value={inputMessage}
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 onSubmit={handleSendMessage}
                                 isSending={isSendingMessage}
+                                onTyping={handleTyping}
                             />
                         </>
                     ) : (

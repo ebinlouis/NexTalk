@@ -18,6 +18,22 @@ const messageSchema = new mongoose.Schema(
         image: {
             type: String,
         },
+        fileUrl: {
+            type: String,
+            default: null,
+        },
+        fileName: {
+            type: String,
+            default: null,
+        },
+        fileType: {
+            type: String,
+            default: null,
+        },
+        fileSize: {
+            type: Number,
+            default: null,
+        },
         seen: {
             type: Boolean,
             default: false,
@@ -34,6 +50,24 @@ const messageSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        isEdited: {
+            type: Boolean,
+            default: false,
+        },
+        editedAt: {
+            type: Date,
+            default: null,
+        },
+        isDeletedForEveryone: {
+            type: Boolean,
+            default: false,
+        },
+        deletedBy: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+        ],
     },
     {
         timestamps: true,
