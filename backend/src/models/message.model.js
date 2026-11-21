@@ -2,21 +2,24 @@ import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema(
     {
-        senderId: {
+        conversationId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'Conversation',
             required: true,
+            index: true,
         },
-        receiverId: {
+        senderId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: true,
         },
         text: {
             type: String,
+            default: '',
         },
         image: {
             type: String,
+            default: null,
         },
         fileUrl: {
             type: String,
@@ -32,22 +35,6 @@ const messageSchema = new mongoose.Schema(
         },
         fileSize: {
             type: Number,
-            default: null,
-        },
-        seen: {
-            type: Boolean,
-            default: false,
-        },
-        seenAt: {
-            type: Date,
-            default: null,
-        },
-        delivered: {
-            type: Boolean,
-            default: false,
-        },
-        deliveredAt: {
-            type: Date,
             default: null,
         },
         isEdited: {
@@ -71,13 +58,12 @@ const messageSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
-    },
+    }
 );
 
 messageSchema.index({
-    senderId: 1,
-    receiverId: 1,
-    createdAt: 1
+    conversationId: 1,
+    createdAt: -1,
 });
 
 const Message = mongoose.model('Message', messageSchema);

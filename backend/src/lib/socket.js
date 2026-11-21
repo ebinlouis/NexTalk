@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import Message from '../models/message.model.js';
 import User from '../models/user.model.js';
+import ConversationMember from '../models/conversationMember.model.js';
 
 const userSocketMap = {}; // { [userId]: socketId }
 
@@ -21,36 +22,37 @@ export const initSocket = (server) => {
         if (userId) {
             userSocketMap[userId] = socket.id;
             try {
-                const senders = await Message.distinct('senderId', { receiverId: userId, delivered: false });
-                if (senders.length > 0) {
-                    await Message.updateMany({ receiverId: userId, delivered: false }, { delivered: true, deliveredAt: new Date() });
-                    senders.forEach((sId) => {
-                        const sSocket = getReceiverSocketId(sId.toString());
-                        if (sSocket) io.to(sSocket).emit('messagesDelivered', { partnerId: userId });
-                    });
-                }
+                const userConvs = await ConversationMember.find({ userId }).distinct('conversationId');
+                userConvs.forEach((convId) => {
+                    socket.join(convId.toString());
+                });
             } catch (err) {
-                console.error('Delivery sync error:', err.message);
+                console.error('Room auto-join error:', err.message);
             }
         }
 
+        socket.on('joinConversation', (conversationId) => {
+            if (conversationId) socket.join(conversationId.toString());
+        });
+
         io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
-        socket.on('markMessagesAsSeen', ({ senderId, receiverId }) => {
-            const senderSocketId = getReceiverSocketId(senderId);
-            if (senderSocketId) {
-                io.to(senderSocketId).emit('messagesSeen', { partnerId: receiverId });
+        socket.on('typing', ({ conversationId, senderId, senderName }) => {
+            if (conversationId) {
+                socket.to(conversationId.toString()).emit('partnerTyping', { conversationId, senderId, senderName });
             }
         });
 
-        socket.on('typing', ({ receiverId, senderId }) => {
-            const receiverSocket = getReceiverSocketId(receiverId);
-            if (receiverSocket) io.to(receiverSocket).emit('partnerTyping', { senderId });
+        socket.on('stopTyping', ({ conversationId, senderId }) => {
+            if (conversationId) {
+                socket.to(conversationId.toString()).emit('partnerStoppedTyping', { conversationId, senderId });
+            }
         });
 
-        socket.on('stopTyping', ({ receiverId, senderId }) => {
-            const receiverSocket = getReceiverSocketId(receiverId);
-            if (receiverSocket) io.to(receiverSocket).emit('partnerStoppedTyping', { senderId });
+        socket.on('conversationRead', ({ conversationId, userId }) => {
+            if (conversationId) {
+                socket.to(conversationId.toString()).emit('conversationRead', { conversationId, userId, readAt: new Date() });
+            }
         });
 
         socket.on('disconnect', async () => {

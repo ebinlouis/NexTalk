@@ -1,5 +1,5 @@
 import cloudinary from '../lib/cloudinary.js';
-import { CustomError } from '../utils/error.js';
+import CustomError from '../utils/error.js';
 
 export const uploadMediaService = (fileBuffer, options = {}) => {
     if (!process.env.CLOUDINARY_CLOUD_NAME) {
