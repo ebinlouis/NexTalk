@@ -1,4 +1,4 @@
-import { ArrowLeft, Phone, Video, MoreVertical, Search, X } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, Search, X, Users, Info } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -22,10 +22,14 @@ export default function ChatHeader({
     onSearchChange,
     isSearchOpen = false,
     onToggleSearch,
+    onOpenGroupInfo,
 }) {
     const { onlineUsers } = useAuthStore();
     const { isPartnerTyping } = useChatStore();
-    const isOnline = onlineUsers.includes(selectedUser?._id?.toString());
+    const isGroup = selectedUser?.type === 'group';
+    const displayName = selectedUser?.name || selectedUser?.fullName || 'Chat';
+    const isOnline = !isGroup && onlineUsers.includes(selectedUser?._id?.toString());
+
     return (
         <div className="px-5 md:px-6 py-3.5 border-b border-line flex items-center justify-between bg-white shrink-0">
             <div className="flex items-center gap-3">
@@ -37,8 +41,23 @@ export default function ChatHeader({
                 >
                     <ArrowLeft size={20} />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative border border-line shrink-0 overflow-hidden">
-                    {selectedUser.profilePic ? (
+                <div
+                    onClick={isGroup ? onOpenGroupInfo : undefined}
+                    className={`w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative border border-line shrink-0 overflow-hidden ${
+                        isGroup ? 'cursor-pointer hover:opacity-90' : ''
+                    }`}
+                >
+                    {isGroup ? (
+                        selectedUser.avatar ? (
+                            <img
+                                src={selectedUser.avatar}
+                                alt={displayName}
+                                className="w-full h-full object-cover rounded-full"
+                            />
+                        ) : (
+                            <Users size={18} className="text-white" />
+                        )
+                    ) : selectedUser.profilePic ? (
                         <img
                             src={selectedUser.profilePic}
                             alt={selectedUser.fullName || ''}
@@ -48,19 +67,27 @@ export default function ChatHeader({
                         <span className="text-xs">{getInitials(selectedUser.fullName)}</span>
                     )}
                 </div>
-                <div className="text-left">
+                <div
+                    onClick={isGroup ? onOpenGroupInfo : undefined}
+                    className={`text-left ${isGroup ? 'cursor-pointer' : ''}`}
+                >
                     <div className="flex items-center gap-2">
-                        <h4 className="text-sm md:text-base font-semibold tracking-tight text-ink">
-                            {selectedUser.fullName}
+                        <h4 className="text-sm md:text-base font-semibold tracking-tight text-ink hover:text-primary transition-colors">
+                            {displayName}
                         </h4>
                         <span className="px-2 py-0.5 text-[11px] font-medium text-teal-700 bg-teal-50 border border-teal-200/60 rounded-full">
-                            {selectedUser.role || 'Member'}
+                            {isGroup ? 'Group' : selectedUser.role || 'Member'}
                         </span>
                     </div>
                     {isPartnerTyping ? (
                         <p className="text-xs text-teal-600 font-medium flex items-center gap-1.5 mt-0.5 animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-ping" />
                             typing...
+                        </p>
+                    ) : isGroup ? (
+                        <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                            <Users size={12} className="text-muted" />
+                            <span>{selectedUser.memberCount || 1} members</span>
                         </p>
                     ) : (
                         <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
@@ -120,6 +147,16 @@ export default function ChatHeader({
                 >
                     <Video size={18} />
                 </button>
+                {isGroup && (
+                    <button
+                        type="button"
+                        onClick={onOpenGroupInfo}
+                        className="p-2 rounded-lg hover:text-ink hover:bg-slate-100 transition-colors cursor-pointer"
+                        title="Group Info & Members"
+                    >
+                        <Info size={18} />
+                    </button>
+                )}
                 <button
                     type="button"
                     className="p-2 rounded-lg hover:text-ink hover:bg-slate-100 transition-colors cursor-pointer"

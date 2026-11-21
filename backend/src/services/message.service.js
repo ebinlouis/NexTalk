@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import User from '../models/user.model.js';
 import Message from '../models/message.model.js';
+import Conversation from '../models/conversation.model.js';
+import ConversationMember from '../models/conversationMember.model.js';
 import CustomError from '../utils/error.js';
 
 export const getAllContactsService = async (currentUserId) => {
@@ -10,7 +12,7 @@ export const getAllContactsService = async (currentUserId) => {
     return users;
 };
 
-export const sendMessageService = async (senderId, receiverId, messageData, isDelivered = false) => {
+export const sendMessageService = async (senderId, conversationId, messageData) => {
     const data = typeof messageData === 'object' && messageData !== null ? messageData : { text: messageData };
     const { text, image, fileUrl, fileName, fileType, fileSize } = data;
 
@@ -18,18 +20,45 @@ export const sendMessageService = async (senderId, receiverId, messageData, isDe
         throw new CustomError('Message content (text, image, or file) is required', 400);
     }
 
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+        throw new CustomError('Conversation not found', 404);
+    }
+
+    const member = await ConversationMember.findOne({ conversationId, userId: senderId });
+    if (!member) {
+        throw new CustomError('Access denied: You are not a member of this conversation', 403);
+    }
+
+    if (conversation.type === 'group' && conversation.permissions?.onlyAdminsCanPost) {
+        if (member.role !== 'admin' && member.role !== 'creator') {
+            throw new CustomError('Only administrators can post in this group', 403);
+        }
+    }
+
+    const sender = await User.findById(senderId).select('fullName');
+
     const newMessage = await Message.create({
+        conversationId,
         senderId,
-        receiverId,
         text: text || '',
         image: image || null,
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
         fileSize: fileSize || null,
-        delivered: isDelivered,
-        deliveredAt: isDelivered ? new Date() : null,
     });
+
+    conversation.lastMessage = {
+        text: text || (image ? '📷 Image' : '📎 Attachment'),
+        senderId,
+        senderName: sender?.fullName || 'User',
+        createdAt: newMessage.createdAt,
+    };
+    await conversation.save();
+
+    member.lastReadAt = new Date();
+    await member.save();
 
     return newMessage;
 };
@@ -78,24 +107,37 @@ export const getChattedUsersService = async (currentUserId) => {
     return conversations;
 };
 
-export const getMessagesService = async (currentUserId, partnerId, { before, limit = 25 } = {}) => {
-    await Message.updateMany(
-        { senderId: partnerId, receiverId: currentUserId, seen: false },
-        { $set: { seen: true, seenAt: new Date() } }
-    );
+export const getMessagesService = async (currentUserId, conversationId, { before, limit = 25 } = {}) => {
+    const member = await ConversationMember.findOne({
+        conversationId,
+        userId: currentUserId,
+    });
+
+    if (!member) {
+        throw new CustomError('Access denied: You are not a member of this conversation', 403);
+    }
+
+    member.lastReadAt = new Date();
+    await member.save();
 
     const query = {
-        $or: [
-            { senderId: currentUserId, receiverId: partnerId },
-            { senderId: partnerId, receiverId: currentUserId },
-        ],
+        conversationId,
         deletedBy: { $ne: currentUserId },
     };
+
+    if (member.clearedHistoryAt) {
+        query.createdAt = { $gt: member.clearedHistoryAt };
+    }
+
     if (before) {
-        query.createdAt = { $lt: new Date(before) };
+        const beforeDate = new Date(before);
+        query.createdAt = query.createdAt
+            ? { ...query.createdAt, $lt: beforeDate }
+            : { $lt: beforeDate };
     }
 
     const messages = await Message.find(query)
+        .populate('senderId', 'fullName profilePic')
         .sort({ createdAt: -1 })
         .limit(Math.min(Number(limit) || 25, 50));
 

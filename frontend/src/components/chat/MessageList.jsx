@@ -41,10 +41,10 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
 
     const handleScroll = async (e) => {
         if (e.currentTarget.scrollTop === 0 && hasMoreMessages && !isLoadingMore && messages.length > 0) {
-            const partnerId = messages[0].senderId === currentUserId ? messages[0].receiverId : messages[0].senderId;
-            if (!partnerId) return;
+            const chatId = messages[0].conversationId || messages[0].receiverId || messages[0].senderId;
+            if (!chatId) return;
             const prevHeight = e.currentTarget.scrollHeight;
-            await loadOlderMessages(partnerId);
+            await loadOlderMessages(chatId);
             requestAnimationFrame(() => {
                 if (containerRef.current) {
                     containerRef.current.scrollTop = containerRef.current.scrollHeight - prevHeight;
@@ -109,7 +109,14 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                         <Ban size={13} className="text-slate-400" />
                                         <span>This message was deleted</span>
                                     </div>
-                                ) : editingMessageId === msg._id ? (
+                                ) : (
+                                    <>
+                                        {!isMe && msg.senderId?.fullName && (
+                                            <p className="text-[11px] font-bold text-primary mb-1">
+                                                {msg.senderId.fullName}
+                                            </p>
+                                        )}
+                                        {editingMessageId === msg._id ? (
                                     <div className="flex flex-col gap-2">
                                         <input
                                             type="text"
@@ -250,6 +257,8 @@ export default function MessageList({ messages, isLoading, currentUserId, partne
                                         </div>
                                     </>
                                 )}
+                            </>
+                        )}
                             </div>
                         </div>
                     );

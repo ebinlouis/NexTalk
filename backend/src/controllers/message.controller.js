@@ -28,25 +28,22 @@ export const getContacts = async (req, res) => {
 export const sendMessage = async (req, res) => {
     try {
         const { text, image, fileUrl, fileName, fileType, fileSize } = req.body;
-        const receiverId = req.params.id;
+        const conversationId = req.params.id;
         const senderId = req.user._id;
 
-        const receiverSocketId = getReceiverSocketId(receiverId);
-        const isDelivered = !!receiverSocketId;
         const newMessage = await sendMessageService(
             senderId,
-            receiverId,
-            { text, image, fileUrl, fileName, fileType, fileSize },
-            isDelivered
+            conversationId,
+            { text, image, fileUrl, fileName, fileType, fileSize }
         );
 
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('newMessage', newMessage);
-        }
+        const populatedMessage = await newMessage.populate('senderId', 'fullName profilePic');
+
+        io.to(conversationId.toString()).emit('newMessage', populatedMessage);
 
         res.status(201).json({
             success: true,
-            data: newMessage,
+            data: populatedMessage,
         });
     } catch (error) {
         console.error('Error in sendMessage:', error.message);
@@ -73,25 +70,17 @@ export const getChattedUsers = async (req, res) => {
 export const getMessages = async (req, res) => {
     try {
         const currentUserId = req.user._id;
-        const partnerId = req.params.id;
+        const conversationId = req.params.id;
 
-        if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid user id',
-            });
-        }
-
-        const partner = await User.findById(partnerId);
-        if (!partner) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found',
+                message: 'Invalid conversation id',
             });
         }
 
         const { before, limit } = req.query;
-        const messages = await getMessagesService(currentUserId, partnerId, { before, limit });
+        const messages = await getMessagesService(currentUserId, conversationId, { before, limit });
 
         res.status(200).json({
             success: true,
@@ -99,7 +88,9 @@ export const getMessages = async (req, res) => {
         });
     } catch (error) {
         console.error('Error in getMessages:', error.message);
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(error.statusCode || 500).json({
+            message: error.message || 'Internal Server Error',
+        });
     }
 };
 

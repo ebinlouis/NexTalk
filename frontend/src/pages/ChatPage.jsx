@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useChatStore } from '../store/useChatStore';
+import { useConversationStore } from '../store/useConversationStore';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatHeader from '../components/chat/ChatHeader';
 import MessageList from '../components/chat/MessageList';
 import MessageInput from '../components/chat/MessageInput';
 import NoChatSelected from '../components/chat/NoChatSelected';
+import GroupInfoDrawer from '../components/chat/GroupInfoDrawer';
 
 export default function ChatPage() {
     const navigate = useNavigate();
@@ -15,8 +17,6 @@ export default function ChatPage() {
     const {
         contacts,
         getContacts,
-        users,
-        getUsers,
         messages,
         isLoadingMessages,
         getMessages,
@@ -29,12 +29,21 @@ export default function ChatPage() {
         sendStopTyping,
     } = useChatStore();
 
-    // Navigation and state
-    const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'contacts'
-    const [selectedUser, setSelectedUser] = useState(null);
+    const {
+        conversations,
+        getConversations,
+        activeConversation,
+        setActiveConversation,
+        getOrCreateDirect,
+        subscribeToConversationEvents,
+        unsubscribeFromConversationEvents,
+    } = useConversationStore();
+
+    const [activeTab, setActiveTab] = useState('chats');
     const [inputMessage, setInputMessage] = useState('');
     const [inChatSearch, setInChatSearch] = useState('');
     const [isChatSearchOpen, setIsChatSearchOpen] = useState(false);
+    const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
     const typingTimeoutRef = useRef(null);
 
     const currentUser = authUser || {
@@ -45,18 +54,20 @@ export default function ChatPage() {
 
     useEffect(() => {
         getContacts();
-        getUsers();
-    }, [getContacts, getUsers]);
+        getConversations();
+        subscribeToConversationEvents();
+        return () => unsubscribeFromConversationEvents();
+    }, [getContacts, getConversations, subscribeToConversationEvents, unsubscribeFromConversationEvents]);
 
     useEffect(() => {
-        if (selectedUser?._id) {
-            getMessages(selectedUser._id).then((res) => {
+        if (activeConversation?._id) {
+            getMessages(activeConversation._id).then((res) => {
                 if (!res?.success && res?.error) toast.error(res.error);
             });
         }
-        subscribeToMessages(selectedUser?._id);
+        subscribeToMessages(activeConversation?._id);
         return () => unsubscribeFromMessages();
-    }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+    }, [activeConversation?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
     const handleLogout = async () => {
         const { success } = await logout();
@@ -65,28 +76,29 @@ export default function ChatPage() {
         }
     };
 
-    const handleSelectContact = (contact) => {
-        setSelectedUser(contact);
-        setActiveTab('chats');
+    const handleSelectContact = async (contact) => {
+        const res = await getOrCreateDirect(contact._id);
+        if (res?.success) {
+            setActiveTab('chats');
+        }
     };
 
     const handleTyping = () => {
-        if (!selectedUser?._id) return;
-        sendTyping(selectedUser._id);
+        if (!activeConversation?._id) return;
+        sendTyping(activeConversation._id);
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
-            sendStopTyping(selectedUser._id);
+            sendStopTyping(activeConversation._id);
         }, 1500);
     };
 
-    // Handle message sending
     const handleSendMessage = async (e, attachedFile) => {
         e?.preventDefault?.();
         const trimmed = inputMessage.trim();
-        if ((!trimmed && !attachedFile) || !selectedUser || isSendingMessage) return;
+        if ((!trimmed && !attachedFile) || !activeConversation || isSendingMessage) return;
 
         clearTimeout(typingTimeoutRef.current);
-        sendStopTyping(selectedUser._id);
+        sendStopTyping(activeConversation._id);
 
         let attachmentData = {};
         if (attachedFile) {
@@ -107,11 +119,10 @@ export default function ChatPage() {
             }
         }
 
-        const isExistingChat = users.some((u) => u._id === selectedUser._id);
-        const res = await sendMessage(selectedUser._id, { text: trimmed, ...attachmentData });
+        const res = await sendMessage(activeConversation._id, { text: trimmed, ...attachmentData });
         if (res?.success) {
             setInputMessage('');
-            if (!isExistingChat) getUsers();
+            getConversations();
         } else if (res?.error) {
             toast.error(res.error);
         }
@@ -125,31 +136,36 @@ export default function ChatPage() {
                     currentUser={currentUser}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    users={users}
+                    users={conversations}
                     contacts={contacts}
-                    selectedUser={selectedUser}
-                    onSelectChat={setSelectedUser}
+                    selectedUser={activeConversation}
+                    onSelectChat={setActiveConversation}
                     onSelectContact={handleSelectContact}
                     onLogout={handleLogout}
                 />
 
                 {/* Right Section */}
-                <div className={`flex-1 h-full flex-col bg-canvas z-10 relative ${selectedUser ? 'flex' : 'hidden md:flex'}`}>
-                    {selectedUser ? (
+                <div
+                    className={`flex-1 h-full flex-col bg-canvas z-10 relative ${
+                        activeConversation ? 'flex' : 'hidden md:flex'
+                    }`}
+                >
+                    {activeConversation ? (
                         <>
                             <ChatHeader
-                                selectedUser={selectedUser}
-                                onBack={() => setSelectedUser(null)}
+                                selectedUser={activeConversation}
+                                onBack={() => setActiveConversation(null)}
                                 searchQuery={inChatSearch}
                                 onSearchChange={setInChatSearch}
                                 isSearchOpen={isChatSearchOpen}
                                 onToggleSearch={() => setIsChatSearchOpen((prev) => !prev)}
+                                onOpenGroupInfo={() => setIsGroupInfoOpen(true)}
                             />
                             <MessageList
                                 messages={messages}
                                 isLoading={isLoadingMessages}
                                 currentUserId={authUser?._id || authUser?.id}
-                                partnerName={selectedUser?.fullName}
+                                partnerName={activeConversation?.name || activeConversation?.fullName}
                                 searchQuery={inChatSearch}
                             />
                             <MessageInput
@@ -159,6 +175,13 @@ export default function ChatPage() {
                                 isSending={isSendingMessage}
                                 onTyping={handleTyping}
                             />
+                            {activeConversation.type === 'group' && (
+                                <GroupInfoDrawer
+                                    isOpen={isGroupInfoOpen}
+                                    onClose={() => setIsGroupInfoOpen(false)}
+                                    conversation={activeConversation}
+                                />
+                            )}
                         </>
                     ) : (
                         <NoChatSelected />

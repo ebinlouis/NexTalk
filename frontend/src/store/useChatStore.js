@@ -170,29 +170,11 @@ export const useChatStore = create((set, get) => ({
 
         socket.off('newMessage');
         socket.on('newMessage', (newMessage) => {
-            const isFromSelected = newMessage.senderId === selectedUserId;
-            if (isFromSelected) {
-                const authUser = useAuthStore.getState().authUser;
-                socket.emit('markMessagesAsSeen', {
-                    senderId: selectedUserId,
-                    receiverId: authUser?._id || authUser?.id,
-                });
-            }
+            const isMatch =
+                newMessage.conversationId === selectedUserId ||
+                newMessage.senderId === selectedUserId;
             set((state) => ({
-                messages: isFromSelected ? [...state.messages, newMessage] : state.messages,
-                users: state.users.map((u) =>
-                    u._id === newMessage.senderId
-                        ? {
-                              ...u,
-                              lastMessage: {
-                                  text: newMessage.text,
-                                  senderId: newMessage.senderId,
-                                  createdAt: newMessage.createdAt,
-                              },
-                              unreadCount: isFromSelected ? 0 : (u.unreadCount || 0) + 1,
-                          }
-                        : u
-                ),
+                messages: isMatch ? [...state.messages, newMessage] : state.messages,
             }));
         });
 
@@ -215,13 +197,17 @@ export const useChatStore = create((set, get) => ({
         });
 
         socket.off('partnerTyping');
-        socket.on('partnerTyping', ({ senderId }) => {
-            if (senderId === selectedUserId) set({ isPartnerTyping: true });
+        socket.on('partnerTyping', ({ conversationId, senderId }) => {
+            if (conversationId === selectedUserId || senderId === selectedUserId) {
+                set({ isPartnerTyping: true });
+            }
         });
 
         socket.off('partnerStoppedTyping');
-        socket.on('partnerStoppedTyping', ({ senderId }) => {
-            if (senderId === selectedUserId) set({ isPartnerTyping: false });
+        socket.on('partnerStoppedTyping', ({ conversationId, senderId }) => {
+            if (conversationId === selectedUserId || senderId === selectedUserId) {
+                set({ isPartnerTyping: false });
+            }
         });
 
         socket.off('userLastSeen');
@@ -260,16 +246,25 @@ export const useChatStore = create((set, get) => ({
         set({ isPartnerTyping: false });
     },
 
-    sendTyping: (receiverId) => {
+    sendTyping: (id) => {
         const socket = useAuthStore.getState().socket;
         const authUser = useAuthStore.getState().authUser;
-        socket?.emit('typing', { receiverId, senderId: authUser?._id || authUser?.id });
+        socket?.emit('typing', {
+            conversationId: id,
+            receiverId: id,
+            senderId: authUser?._id || authUser?.id,
+            senderName: authUser?.fullName,
+        });
     },
 
-    sendStopTyping: (receiverId) => {
+    sendStopTyping: (id) => {
         const socket = useAuthStore.getState().socket;
         const authUser = useAuthStore.getState().authUser;
-        socket?.emit('stopTyping', { receiverId, senderId: authUser?._id || authUser?.id });
+        socket?.emit('stopTyping', {
+            conversationId: id,
+            receiverId: id,
+            senderId: authUser?._id || authUser?.id,
+        });
     },
 
     editMessage: async (messageId, text) => {

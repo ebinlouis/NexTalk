@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { LogOut, Search } from 'lucide-react';
+import { LogOut, Search, UserPlus, Users } from 'lucide-react';
 import { getInitials } from '../../utils/getInitials';
 import { useAuthStore } from '../../store/useAuthStore';
 import ProfileModal from '../profile/ProfileModal';
+import CreateGroupModal from './CreateGroupModal';
 
 const renderAvatar = (user, textClass = 'text-xs') =>
     user?.profilePic ? (
@@ -33,11 +34,15 @@ export default function ChatSidebar({
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
     const filteredUsers = users.filter((u) => {
-        const matches = u.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+        const name = u.name || u.fullName || '';
+        const matches = name.toLowerCase().includes(searchQuery.toLowerCase());
         if (!matches) return false;
         if (activeFilter === 'Unread') return (u.unreadCount || 0) > 0;
+        if (activeFilter === 'Direct') return u.type === 'direct' || !u.type;
+        if (activeFilter === 'Groups') return u.type === 'group';
         return true;
     });
 
@@ -86,14 +91,24 @@ export default function ChatSidebar({
                         </p>
                     </div>
                 </button>
-                <button
-                    type="button"
-                    onClick={onLogout}
-                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer focus:outline-none"
-                    title="Sign Out"
-                >
-                    <LogOut size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setIsCreateGroupOpen(true)}
+                        className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer focus:outline-none"
+                        title="Create New Group"
+                    >
+                        <UserPlus size={18} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onLogout}
+                        className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer focus:outline-none"
+                        title="Sign Out"
+                    >
+                        <LogOut size={18} />
+                    </button>
+                </div>
             </div>
 
             {/* Search Bar */}
@@ -163,13 +178,20 @@ export default function ChatSidebar({
             <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1 bg-white custom-scrollbar">
                 {activeTab === 'chats'
                     ? filteredUsers.map((chat) => {
+                          const isGroup = chat.type === 'group';
+                          const displayName = chat.name || chat.fullName || 'Chat';
                           const isLastFromMe =
                               chat.lastMessage?.senderId?.toString() ===
                               (currentUser?._id || currentUser?.id)?.toString();
+                          const lastText = chat.lastMessage?.text || '';
+                          const senderPrefix =
+                              isGroup && chat.lastMessage?.senderName && !isLastFromMe
+                                  ? `${chat.lastMessage.senderName}: `
+                                  : isLastFromMe
+                                  ? 'You: '
+                                  : '';
                           const previewText = chat.lastMessage
-                              ? isLastFromMe
-                                  ? `You: ${chat.lastMessage.text}`
-                                  : chat.lastMessage.text
+                              ? `${senderPrefix}${lastText}`
                               : 'No messages yet';
                           const formattedTime = chat.lastMessage?.createdAt
                               ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {
@@ -188,22 +210,44 @@ export default function ChatSidebar({
                                   }`}
                               >
                                   <div className="flex items-center gap-3 min-w-0">
-                                      <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs">
-                                          {renderAvatar(chat, 'text-xs')}
-                                          {onlineUsers.includes(chat._id?.toString()) && (
-                                              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
+                                      <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold relative shrink-0 ring-2 ring-white shadow-xs overflow-hidden">
+                                          {isGroup ? (
+                                              chat.avatar ? (
+                                                  <img
+                                                      src={chat.avatar}
+                                                      alt={displayName}
+                                                      className="w-full h-full object-cover rounded-full"
+                                                  />
+                                              ) : (
+                                                  <Users size={18} className="text-white" />
+                                              )
+                                          ) : (
+                                              renderAvatar(chat, 'text-xs')
                                           )}
+                                          {!isGroup &&
+                                              onlineUsers.includes(
+                                                  (chat.partner?._id || chat._id)?.toString()
+                                              ) && (
+                                                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-success border-2 border-white" />
+                                              )}
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                          <h5
-                                              className={`text-xs font-semibold truncate transition-colors ${
-                                                  selectedUser?._id === chat._id
-                                                      ? 'text-primary'
-                                                      : 'text-ink'
-                                              }`}
-                                          >
-                                              {chat.fullName}
-                                          </h5>
+                                          <div className="flex items-center gap-1.5">
+                                              <h5
+                                                  className={`text-xs font-semibold truncate transition-colors ${
+                                                      selectedUser?._id === chat._id
+                                                          ? 'text-primary'
+                                                          : 'text-ink'
+                                                  }`}
+                                              >
+                                                  {displayName}
+                                              </h5>
+                                              {isGroup && (
+                                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 text-muted font-medium shrink-0">
+                                                      Group
+                                                  </span>
+                                              )}
+                                          </div>
                                           <p className="text-xs text-muted truncate max-w-[180px] leading-tight mt-0.5">
                                               {previewText}
                                           </p>
@@ -250,6 +294,10 @@ export default function ChatSidebar({
             </div>
 
             <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+            <CreateGroupModal
+                isOpen={isCreateGroupOpen}
+                onClose={() => setIsCreateGroupOpen(false)}
+            />
         </div>
     );
 }
